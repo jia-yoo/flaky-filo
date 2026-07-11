@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: flaky-filo
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/flaky-filo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: flaky-filo1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.hibernate.SQL: debug

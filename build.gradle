@@ -1,0 +1,54 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.flakyfilo'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // 웹 (REST API)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // JPA (MyBatis 대체 - 이번 프로젝트 핵심 전환 포인트)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // 요청 값 검증 (@NotNull, @Min 등)
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // MySQL 드라이버
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // 개발 편의 (변경 시 자동 재시작)
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // 테스트
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // 테스트는 실제 MySQL 대신 인메모리 H2로 - 빠르고 격리된 테스트 가능
+    testRuntimeOnly 'com.h2database:h2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

@@ -1,0 +1,16 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: flaky-filo-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: flaky-filo1234
+      MYSQL_DATABASE: flaky-filo
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - flaky-filo-mysql-data:/var/lib/mysql
+
+volumes:
+  flaky-filo-mysql-data:
