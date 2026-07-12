@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>재고 변동 이력 - Flaky Filo</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="topbar">
+    <a class="brand" href="index.html">
+        <img alt="Flaky Filo" class="brand-logo" src="img/logo-icon.png">
+        <span class="brand-sub">FLAKY FILO</span>
+    </a>
+    <nav class="nav-links">
+        <a href="index.html">대시보드</a>
+        <a href="materials.html">원재료</a>
+    </nav>
+</header>
+
+<main class="page">
+    <div class="page-header">
+        <a class="back-link" href="materials.html">← 원재료 목록으로</a>
+        <h1 id="material-name">재고 변동 이력</h1>
+        <p id="material-summary"></p>
+    </div>
+
+    <section class="card">
+        <table>
+            <thead>
+            <tr>
+                <th>일시</th>
+                <th>구분</th>
+                <th>변동량</th>
+                <th>사유</th>
+            </tr>
+            </thead>
+            <tbody id="history-table-body">
+            <!-- JS가 채워넣음 -->
+            </tbody>
+        </table>
+
+        <div class="empty-state" id="empty-state" style="display:none;">
+            아직 재고 변동 이력이 없어요.
+        </div>
+    </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/material-history.js"></script>
+</body>
+</html>

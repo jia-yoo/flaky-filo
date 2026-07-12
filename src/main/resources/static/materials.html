@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>원재료 관리 - Flaky Filo</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<header class="topbar">
+    <a class="brand" href="index.html">
+        <img alt="Flaky Filo" class="brand-logo" src="img/logo-icon.png">
+        <span class="brand-sub">FLAKY FILO</span>
+    </a>
+    <nav class="nav-links">
+        <a href="index.html">대시보드</a>
+        <a href="materials.html">원재료</a>
+    </nav>
+</header>
+
+<main class="page">
+    <div class="page-header">
+        <h1>원재료 관리</h1>
+        <p>원재료를 등록하고, 입고·폐기·실사로 재고를 관리하세요.</p>
+    </div>
+
+    <!-- 등록/수정 폼 -->
+    <section class="card" id="material-form-card" style="margin-bottom: 24px;">
+        <h3 id="form-title" style="margin-bottom: 16px;">원재료 등록</h3>
+        <form id="material-form">
+            <input id="material-id" type="hidden">
+            <div class="form-grid">
+                <div>
+                    <label for="name">원재료명</label>
+                    <input id="name" placeholder="예: 박력분" required type="text">
+                </div>
+                <div>
+                    <label for="unit">단위</label>
+                    <select id="unit" required>
+                        <option value="G">g</option>
+                        <option value="KG">kg</option>
+                        <option value="L">L</option>
+                        <option value="ML">ml</option>
+                        <option value="EA">개(ea)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="minStockThreshold">재고 부족 기준</label>
+                    <input id="minStockThreshold" placeholder="예: 5" required step="0.001" type="number">
+                </div>
+                <div>
+                    <label for="unitCost">단가</label>
+                    <input id="unitCost" placeholder="예: 2200" step="0.01" type="number">
+                </div>
+                <div>
+                    <label for="supplier-select">구매처</label>
+                    <select id="supplier-select">
+                        <option value="">선택 안 함</option>
+                        <!-- JS가 등록된 구매처로 옵션을 채워넣음 -->
+                    </select>
+                </div>
+                <div>
+                    <label for="note">비고</label>
+                    <input id="note" placeholder="예: 백설 박력분" type="text">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" id="submit-btn" type="submit">등록</button>
+                <button class="btn-ghost" id="cancel-edit-btn" style="display:none;" type="button">취소</button>
+                <button class="btn-ghost" id="manage-supplier-btn" style="margin-left:auto;" type="button">구매처 관리</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- 목록 -->
+    <section class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <h3>원재료 목록</h3>
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <input id="search-input" placeholder="이름으로 검색" style="width:180px;" type="text">
+                <select id="supplier-filter" style="width:150px;">
+                    <option value="">구매처 전체</option>
+                    <!-- JS가 등록된 구매처 목록(id 기준)으로 옵션을 채워넣음 -->
+                </select>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; margin:0; white-space:nowrap;">
+                    <input id="low-stock-only" style="width:auto;" type="checkbox">
+                    재고 부족만 보기
+                </label>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>이름</th>
+                <th>재고</th>
+                <th>기준</th>
+                <th>단가</th>
+                <th>구매처</th>
+                <th>상태</th>
+                <th>액션</th>
+            </tr>
+            </thead>
+            <tbody id="material-table-body">
+            </tbody>
+        </table>
+
+        <p id="result-count" style="font-size:12px; color:var(--text-secondary); margin-top:12px;"></p>
+
+        <div class="empty-state" id="empty-state" style="display:none;">
+            등록된 원재료가 없어요. 위 폼에서 첫 원재료를 등록해보세요.
+        </div>
+    </section>
+</main>
+
+<!-- 입고 / 폐기·손실 모달 -->
+<dialog id="stock-dialog">
+    <h3>입고 · 폐기</h3>
+    <form id="stock-form">
+        <input id="stock-material-id" type="hidden">
+        <div class="type-toggle">
+            <button class="type-btn active" data-type="IN" type="button">입고</button>
+            <button class="type-btn" data-type="OUT" type="button">폐기 · 손실</button>
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label for="stock-quantity">수량</label>
+            <input id="stock-quantity" required step="0.001" type="number">
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label for="stock-date">발생일</label>
+            <input id="stock-date" required type="date">
+        </div>
+        <div style="margin-bottom: 18px;">
+            <label for="stock-reason">사유</label>
+            <input id="stock-reason" placeholder="예: 정기 발주 입고" type="text">
+        </div>
+        <div class="form-actions">
+            <button class="btn-primary" type="submit">처리</button>
+            <button class="btn-ghost" id="stock-cancel-btn" type="button">취소</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- 실사 모달 -->
+<dialog id="stocktake-dialog">
+    <h3>재고 실사</h3>
+    <form id="stocktake-form">
+        <input id="stocktake-material-id" type="hidden">
+        <p id="stocktake-current-info" style="font-size:13px; color:var(--text-secondary); margin: 0 0 14px;"></p>
+        <div style="margin-bottom: 14px;">
+            <label for="stocktake-actual">실제 재고량</label>
+            <input id="stocktake-actual" required step="0.001" type="number">
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label for="stocktake-date">실사일</label>
+            <input id="stocktake-date" required type="date">
+        </div>
+        <div style="margin-bottom: 18px;">
+            <label for="stocktake-reason">메모</label>
+            <input id="stocktake-reason" placeholder="예: 월말 정기 실사" type="text">
+        </div>
+        <div class="form-actions">
+            <button class="btn-primary" type="submit">반영</button>
+            <button class="btn-ghost" id="stocktake-cancel-btn" type="button">취소</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- 구매처 관리 모달 - 별도 페이지 없이 여기서 목록/등록/삭제 처리 -->
+<dialog id="supplier-dialog">
+    <h3>구매처 관리</h3>
+    <form id="supplier-form" style="margin-bottom: 16px;">
+        <div style="margin-bottom: 10px;">
+            <label for="new-supplier-name">구매처명</label>
+            <input id="new-supplier-name" placeholder="예: 쿠팡" required type="text">
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label for="new-supplier-phone">연락처</label>
+            <input id="new-supplier-phone" placeholder="예: 02-1234-5678" type="text">
+        </div>
+        <button class="btn-primary btn-sm" type="submit">추가</button>
+    </form>
+
+    <div id="supplier-list" style="max-height:220px; overflow-y:auto;">
+        <!-- JS가 구매처 목록을 여기 채워넣음 -->
+    </div>
+
+    <div class="form-actions" style="margin-top:16px;">
+        <button class="btn-ghost" id="supplier-dialog-close-btn" type="button">닫기</button>
+    </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/material.js"></script>
+</body>
+</html>
