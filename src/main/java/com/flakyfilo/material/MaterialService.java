@@ -31,12 +31,14 @@ public class MaterialService {
 
     @Transactional
     public Material register(Long storeId, String name, MaterialUnit unit,
-                             BigDecimal minStockThreshold, BigDecimal unitCost,
+                             BigDecimal minStockThreshold, BigDecimal referenceQuantity, BigDecimal referencePrice,
                              Long supplierId, String note) {
         Supplier supplier = resolveSupplier(supplierId);
-        Material material = Material.register(storeId, name, unit, minStockThreshold, unitCost, supplier, note); // ← 여기서 진짜 Supplier 객체를 넘김
+        Material material = Material.register(storeId, name, unit, minStockThreshold,
+                referenceQuantity, referencePrice, supplier, note);
         return materialRepository.save(material);
     }
+
     public Material getById(Long materialId) {
         return findOrThrow(materialId);
     }
@@ -51,28 +53,30 @@ public class MaterialService {
 
     @Transactional
     public void updateInfo(Long materialId, String name, MaterialUnit unit, BigDecimal minStockThreshold,
+                           BigDecimal referenceQuantity, BigDecimal referencePrice,
                            Long supplierId, String note) {
         Material material = findOrThrow(materialId);
         Supplier supplier = resolveSupplier(supplierId);
         material.updateInfo(name, unit, minStockThreshold, supplier, note);
-        // JPA 영속성 컨텍스트 안에서 필드만 바꾸면, 트랜잭션 커밋 시점에 자동으로 UPDATE 쿼리가 나간다.
-        // (= "더티 체킹". materialRepository.save()를 따로 안 불러도 됨)
-    }
-
-    @Transactional
-    public void updateUnitCost(Long materialId, BigDecimal newUnitCost) {
-        Material material = findOrThrow(materialId);
-        material.updateUnitCost(newUnitCost);
+        material.updateReferencePricing(referenceQuantity, referencePrice);
     }
 
     /**
-     * 원재료 입고 / 폐기·손실 처리 (IN, OUT만 - 보정은 applyStocktake로 분리됨).
-     * reasonCode는 사용자가 고르지 않고, "이 메서드(=수동 등록 경로)로 들어왔다"는 사실 자체로 결정된다.
-     * (생산으로 인한 자동 소진은 ProductService가 별도로 PRODUCTION_CONSUMPTION을 부여하며 이 메서드를 거치지 않는다)
+     * "10kg에 3만원"처럼 기준 수량/가격을 갱신 - 단가는 이 값들로부터 자동 계산됨 (Material.getUnitCost() 참고)
+     */
+    @Transactional
+    public void updateReferencePricing(Long materialId, BigDecimal referenceQuantity, BigDecimal referencePrice) {
+        Material material = findOrThrow(materialId);
+        material.updateReferencePricing(referenceQuantity, referencePrice);
+    }
+
+    /**
+     * 원재료 입고 / 폐기·손실 처리 (IN, OUT 전용 - "이동"이라는 의미). 보정은 applyStocktake로 분리됨.
+     * 단가는 여기서 안 바뀜 - 단가는 Material의 기준수량/기준가격(register, updateReferencePricing)으로만 갱신됨.
      */
     @Transactional
     public void moveStock(Long materialId, StockTransactionType type, BigDecimal quantity,
-                            String reason, LocalDate transactionDate) {
+                                    String reason, LocalDate transactionDate) {
         Material material = findOrThrow(materialId);
 
         StockReasonCode reasonCode = switch (type) {
@@ -84,8 +88,7 @@ public class MaterialService {
                 material.decreaseStock(quantity);
                 yield StockReasonCode.DISPOSAL;
             }
-            case ADJUST_UP, ADJUST_DOWN ->
-                    throw new BusinessException("보정은 실사(stocktake) API를 사용하세요.");
+            case ADJUST_UP, ADJUST_DOWN -> throw new BusinessException("보정은 실사(stocktake) API를 사용하세요.");
         };
 
         transactionRepository.save(

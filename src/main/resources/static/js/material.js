@@ -226,7 +226,8 @@ form.addEventListener("submit", async (e) => {
         name: document.getElementById("name").value,
         unit: document.getElementById("unit").value,
         minStockThreshold: Number(document.getElementById("minStockThreshold").value),
-        unitCost: Number(document.getElementById("unitCost").value || 0),
+        referenceQuantity: Number(document.getElementById("referenceQuantity").value || 1),
+        referencePrice: Number(document.getElementById("referencePrice").value || 0),
         supplierId: supplierSelect.value ? Number(supplierSelect.value) : null,
         note: document.getElementById("note").value || null,
     };
@@ -272,7 +273,8 @@ async function startEdit(id) {
         document.getElementById("name").value = m.name;
         document.getElementById("unit").value = m.unit;
         document.getElementById("minStockThreshold").value = m.minStockThreshold;
-        document.getElementById("unitCost").value = m.unitCost;
+        document.getElementById("referenceQuantity").value = m.referenceQuantity;
+        document.getElementById("referencePrice").value = m.referencePrice;
         supplierSelect.value = m.supplierId ?? "";
         document.getElementById("note").value = m.note ?? "";
 
@@ -379,7 +381,7 @@ const stocktakeForm = document.getElementById("stocktake-form");
 const stocktakeMaterialId = document.getElementById("stocktake-material-id");
 const stocktakeDateInput = document.getElementById("stocktake-date");
 const stocktakeCurrentInfo = document.getElementById("stocktake-current-info");
-let selectedIsPeriodic = false; // 기본값: 수시보정 실사
+let selectedIsPeriodic = false; // 기본값: 수시 보정 (실사보다 오입력 정정으로 쓰이는 빈도가 더 높아서)
 
 function openStocktakeDialog(materialId, name, currentStock, unitLabel) {
     stocktakeMaterialId.value = materialId;

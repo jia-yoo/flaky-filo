@@ -13,7 +13,9 @@ public record MaterialResponse(
         MaterialUnit unit,
         BigDecimal currentStock,
         BigDecimal minStockThreshold,
-        BigDecimal unitCost,
+        BigDecimal referenceQuantity,
+        BigDecimal referencePrice,
+        BigDecimal unitCost, // 저장된 값이 아니라 referencePrice/referenceQuantity로 계산된 값 (참고용으로 내려줌)
         Long supplierId,
         String supplierName, // 화면에 바로 표시할 수 있게 이름까지 내려줌 (프론트가 또 조회 안 해도 되게)
         String note,
@@ -28,6 +30,8 @@ public record MaterialResponse(
                 material.getUnit(),
                 material.getCurrentStock(),
                 material.getMinStockThreshold(),
+                material.getReferenceQuantity(),
+                material.getReferencePrice(),
                 material.getUnitCost(),
                 material.getSupplier() != null ? material.getSupplier().getId() : null,
                 material.getSupplier() != null ? material.getSupplier().getName() : null,

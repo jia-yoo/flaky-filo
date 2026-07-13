@@ -22,8 +22,8 @@ public class MaterialController {
     @PostMapping
     public ResponseEntity<MaterialResponse> create(@Valid @RequestBody MaterialCreateRequest request) {
         Material material = materialService.register(
-                request.storeId(), request.name(), request.unit(),
-                request.minStockThreshold(), request.unitCost(),
+                request.storeId(), request.name(), request.unit(), request.minStockThreshold(),
+                request.referenceQuantity(), request.referencePrice(),
                 request.supplierId(), request.note());
         return ResponseEntity.status(HttpStatus.CREATED).body(MaterialResponse.from(material));
     }
@@ -60,6 +60,7 @@ public class MaterialController {
     @PutMapping("/{id}")
     public MaterialResponse update(@PathVariable Long id, @Valid @RequestBody MaterialUpdateRequest request) {
         materialService.updateInfo(id, request.name(), request.unit(), request.minStockThreshold(),
+                request.referenceQuantity(), request.referencePrice(),
                 request.supplierId(), request.note());
         return MaterialResponse.from(materialService.getById(id));
     }
@@ -78,9 +79,16 @@ public class MaterialController {
     }
 
     @PostMapping("/{id}/stock")
-    public ResponseEntity<Void> moveStock(@PathVariable Long id, @Valid @RequestBody StockMovementRequest request) {
+    public ResponseEntity<Void> recordStockMovement(@PathVariable Long id, @Valid @RequestBody StockMovementRequest request) {
         materialService.moveStock(id, request.type(), request.quantity(), request.reason(), request.transactionDate());
         return ResponseEntity.noContent().build();
+    }
+
+    // 기준가격 갱신 전용 엔드포인트 (신규)
+    @PutMapping("/{id}/reference-pricing")
+    public MaterialResponse updateReferencePricing(@PathVariable Long id, @Valid @RequestBody ReferencePricingRequest request) {
+        materialService.updateReferencePricing(id, request.referenceQuantity(), request.referencePrice());
+        return MaterialResponse.from(materialService.getById(id));
     }
 
     @DeleteMapping("/{id}")
