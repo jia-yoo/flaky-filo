@@ -2,29 +2,20 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>재고 변동 이력 - Flaky Filo</title>
-    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<header class="topbar">
-    <a class="brand" href="index.html">
-        <img alt="Flaky Filo" class="brand-logo" src="img/logo-icon.png">
-        <span class="brand-sub">FLAKY FILO</span>
-    </a>
-    <nav class="nav-links">
-        <a href="index.html">대시보드</a>
-        <a href="materials.html">원재료</a>
-    </nav>
-</header>
-
+<div id="topbar-placeholder"></div>
+<script src="js/common.js"></script>
 
 <main class="page">
     <div class="page-header">
-        <a class="back-link" href="materials.html">← 원재료 목록으로</a>
+        <a href="materials.html" class="back-link">← 원재료 목록으로</a>
         <h1 id="material-name">재고 변동 이력</h1>
         <p id="material-summary"></p>
     </div>
@@ -33,11 +24,11 @@
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
             <label style="margin:0; display:flex; align-items:center; gap:6px; font-size:13px;">
                 시작일
-                <input id="from-date" type="date">
+                <input type="date" id="from-date">
             </label>
             <label style="margin:0; display:flex; align-items:center; gap:6px; font-size:13px;">
                 종료일
-                <input id="to-date" type="date">
+                <input type="date" id="to-date">
             </label>
             <span style="font-size:12px; color:var(--text-secondary);">기본값은 이번 달 1일 ~ 오늘이에요. 기간을 바꾸면 바로 다시 조회돼요.</span>
         </div>
@@ -58,7 +49,7 @@
             </tbody>
         </table>
 
-        <div class="empty-state" id="empty-state" style="display:none;">
+        <div id="empty-state" class="empty-state" style="display:none;">
             아직 재고 변동 이력이 없어요.
         </div>
     </section>

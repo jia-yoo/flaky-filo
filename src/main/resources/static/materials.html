@@ -5,21 +5,13 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>원재료 관리 - Flaky Filo</title>
     <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Alfa+Slab+One&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
 
-<header class="topbar">
-    <a class="brand" href="index.html">
-        <img alt="Flaky Filo" class="brand-logo" src="img/logo-icon.png">
-        <span class="brand-sub">FLAKY FILO</span>
-    </a>
-    <nav class="nav-links">
-        <a href="index.html">대시보드</a>
-        <a href="materials.html">원재료</a>
-    </nav>
-</header>
+<div id="topbar-placeholder"></div>
+<script src="js/common.js"></script>
 
 <main class="page">
     <div class="page-header">
@@ -152,8 +144,8 @@
         <input id="stocktake-material-id" type="hidden">
         <p id="stocktake-current-info" style="font-size:13px; color:var(--text-secondary); margin: 0 0 14px;"></p>
         <div class="type-toggle">
-            <button class="stocktake-type-btn" data-periodic="true" type="button">정기 실사</button>
-            <button class="stocktake-type-btn active" data-periodic="false" type="button">수시 보정</button>
+            <button type="button" class="stocktake-type-btn" data-periodic="true">정기 실사</button>
+            <button type="button" class="stocktake-type-btn active" data-periodic="false">수시 보정</button>
         </div>
         <div style="margin-bottom: 14px;">
             <label for="stocktake-actual">실제 재고량</label>
@@ -173,6 +165,7 @@
         </div>
     </form>
 </dialog>
+
 <!-- 구매처 관리 모달 - 별도 페이지 없이 여기서 목록/등록/삭제 처리 -->
 <dialog id="supplier-dialog">
     <h3>구매처 관리</h3>
@@ -183,7 +176,7 @@
         </div>
         <div style="margin-bottom: 14px;">
             <label for="new-supplier-note">비고</label>
-            <input id="new-supplier-note" placeholder="예: 평균배송 3일 소요" type="text">
+            <input id="new-supplier-note" placeholder="예: 담당자 김OO, 매주 화요일 배송" type="text">
         </div>
         <button class="btn-primary btn-sm" type="submit">추가</button>
     </form>
