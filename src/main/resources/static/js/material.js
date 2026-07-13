@@ -81,7 +81,7 @@ function renderSupplierManageList() {
     }
     container.innerHTML = allSuppliers.map((s) => `
         <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
-            <span>${escapeHtml(s.name)} ${s.phone ? `<span style="color:var(--text-secondary);">· ${escapeHtml(s.phone)}</span>` : ""}</span>
+            <span>${escapeHtml(s.name)} ${s.note ? `<span style="color:var(--text-secondary);">· ${escapeHtml(s.note)}</span>` : ""}</span>
             <button type="button" class="btn-danger-text" onclick="deleteSupplier(${s.id})">삭제</button>
         </div>
     `).join("");
@@ -98,8 +98,7 @@ document.getElementById("supplier-form").addEventListener("submit", async (e) =>
     e.preventDefault();
     const payload = {
         name: document.getElementById("new-supplier-name").value,
-        phone: document.getElementById("new-supplier-phone").value || null,
-        note: null,
+        note: document.getElementById("new-supplier-note").value || null,
     };
     try {
         const response = await fetch(SUPPLIER_API, {
@@ -199,6 +198,7 @@ function renderTable(materials) {
             <td>${m.minStockThreshold} ${unitLabel}</td>
             <td>${Number(m.unitCost).toLocaleString()}원</td>
             <td>${escapeHtml(m.supplierName ?? "-")}</td>
+            <td>${escapeHtml(m.note ?? "-")}</td>
             <td>${statusBadge}</td>
             <td class="actions-cell">
                 <button class="btn-ghost btn-sm" onclick="openStockDialog(${m.id})">입고·폐기</button>

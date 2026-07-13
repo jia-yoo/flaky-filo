@@ -21,21 +21,17 @@ public class Supplier extends BaseTimeEntity {
     @Column(nullable = false, length = 100, unique = true)
     private String name;
 
-    @Column(length = 20)
-    private String phone;
-
     @Column(length = 200)
     private String note;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private Supplier(String name, String phone, String note) {
+    private Supplier(String name, String note) {
         this.name = name;
-        this.phone = phone;
         this.note = note;
     }
 
-    public static Supplier register(String name, String phone, String note) {
+    public static Supplier register(String name, String note) {
         Validate.notBlank(name, "구매처명");
-        return Supplier.builder().name(name).phone(phone).note(note).build();
+        return Supplier.builder().name(name).note(note).build();
     }
 }

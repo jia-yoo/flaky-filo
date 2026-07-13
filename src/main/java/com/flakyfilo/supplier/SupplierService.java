@@ -1,6 +1,8 @@
 package com.flakyfilo.supplier;
 
 import com.flakyfilo.common.EntityFinder;
+import com.flakyfilo.common.exception.BusinessException;
+import com.flakyfilo.material.MaterialRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,10 +15,11 @@ import java.util.List;
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;
+    private final MaterialRepository materialRepository;
 
     @Transactional
-    public Supplier register(String name, String phone, String note) {
-        return supplierRepository.save(Supplier.register(name, phone, note));
+    public Supplier register(String name, String note) {
+        return supplierRepository.save(Supplier.register(name, note));
     }
 
     public List<Supplier> getAll() {
@@ -26,8 +29,13 @@ public class SupplierService {
     @Transactional
     public void delete(Long id) {
         Supplier supplier = EntityFinder.findOrThrow(supplierRepository, id, "구매처");
-        // TODO: 이 구매처를 참조 중인 원재료가 있으면 삭제 시 DB 외래키 제약으로 실패함 (의도된 동작 -
-        // 참조 무결성이 지켜져야 하니, 삭제 전에 원재료 쪽 구매처를 먼저 바꾸도록 안내 필요)
+
+        // DB 외래키 제약이 막아주긴 하지만, 그러면 정제 안 된 에러가 나가니 여기서 미리 확인해서 사용자에게 이해되는 메시지로 안내한다.
+        if (materialRepository.existsBySupplierId(id)) {
+            throw new BusinessException(
+                    "이 구매처를 사용 중인 원재료가 있어 삭제할 수 없습니다. 먼저 해당 원재료의 구매처를 변경해주세요.");
+        }
+
         supplierRepository.delete(supplier);
     }
 }

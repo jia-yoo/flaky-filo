@@ -19,7 +19,7 @@ public class SupplierController {
 
     @PostMapping
     public ResponseEntity<SupplierResponse> create(@Valid @RequestBody SupplierRequest request) {
-        Supplier supplier = supplierService.register(request.name(), request.phone(), request.note());
+        Supplier supplier = supplierService.register(request.name(), request.note());
         return ResponseEntity.status(HttpStatus.CREATED).body(SupplierResponse.from(supplier));
     }
 
