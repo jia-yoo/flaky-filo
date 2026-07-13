@@ -379,13 +379,29 @@ const stocktakeForm = document.getElementById("stocktake-form");
 const stocktakeMaterialId = document.getElementById("stocktake-material-id");
 const stocktakeDateInput = document.getElementById("stocktake-date");
 const stocktakeCurrentInfo = document.getElementById("stocktake-current-info");
+let selectedIsPeriodic = false; // 기본값: 수시보정 실사
 
 function openStocktakeDialog(materialId, name, currentStock, unitLabel) {
     stocktakeMaterialId.value = materialId;
     stocktakeForm.reset();
     stocktakeDateInput.value = todayString();
     stocktakeCurrentInfo.textContent = `${name} · 현재 시스템 재고: ${currentStock} ${unitLabel}`;
+    selectedIsPeriodic = false;
+    updateStocktakeTypeToggleUI();
     stocktakeDialog.showModal();
+}
+
+document.querySelectorAll(".stocktake-type-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        selectedIsPeriodic = btn.dataset.periodic === "true";
+        updateStocktakeTypeToggleUI();
+    });
+});
+
+function updateStocktakeTypeToggleUI() {
+    document.querySelectorAll(".stocktake-type-btn").forEach((btn) => {
+        btn.classList.toggle("active", (btn.dataset.periodic === "true") === selectedIsPeriodic);
+    });
 }
 
 document.getElementById("stocktake-cancel-btn").addEventListener("click", () => stocktakeDialog.close());
@@ -397,6 +413,7 @@ stocktakeForm.addEventListener("submit", async (e) => {
         actualStock: Number(document.getElementById("stocktake-actual").value),
         reason: document.getElementById("stocktake-reason").value || null,
         transactionDate: stocktakeDateInput.value,
+        isPeriodic: selectedIsPeriodic,
     };
 
     try {

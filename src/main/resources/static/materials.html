@@ -5,7 +5,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>원재료 관리 - Flaky Filo</title>
     <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Alfa+Slab+One&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
@@ -151,6 +151,10 @@
     <form id="stocktake-form">
         <input id="stocktake-material-id" type="hidden">
         <p id="stocktake-current-info" style="font-size:13px; color:var(--text-secondary); margin: 0 0 14px;"></p>
+        <div class="type-toggle">
+            <button class="stocktake-type-btn" data-periodic="true" type="button">정기 실사</button>
+            <button class="stocktake-type-btn active" data-periodic="false" type="button">수시 보정</button>
+        </div>
         <div style="margin-bottom: 14px;">
             <label for="stocktake-actual">실제 재고량</label>
             <input id="stocktake-actual" required step="0.001" type="number">
@@ -169,7 +173,6 @@
         </div>
     </form>
 </dialog>
-
 <!-- 구매처 관리 모달 - 별도 페이지 없이 여기서 목록/등록/삭제 처리 -->
 <dialog id="supplier-dialog">
     <h3>구매처 관리</h3>

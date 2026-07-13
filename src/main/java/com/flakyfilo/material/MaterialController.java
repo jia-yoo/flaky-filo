@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -47,8 +48,11 @@ public class MaterialController {
     }
 
     @GetMapping("/{id}/transactions")
-    public List<MaterialStockTransactionResponse> getTransactionHistory(@PathVariable Long id) {
-        return materialService.getTransactionHistory(id).stream()
+    public List<MaterialStockTransactionResponse> getTransactionHistory(
+            @PathVariable Long id,
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to) {
+        return materialService.getTransactionHistory(id, from, to).stream()
                 .map(MaterialStockTransactionResponse::from)
                 .toList();
     }
@@ -67,14 +71,15 @@ public class MaterialController {
      * 반면 adjustStock은 "5개를 추가로 입고했다"는 변화량이라, 반복하면 결과가 계속 바뀜 -> POST.
      */
     @PutMapping("/{id}/stocktake")
-    public MaterialResponse applyStocktake(@PathVariable Long id, @Valid @RequestBody StockAdjustRequest request) {
-        materialService.applyStocktake(id, request.quantity(), request.reason(), request.transactionDate());
+    public MaterialResponse applyStocktake(@PathVariable Long id, @Valid @RequestBody StocktakeRequest request) {
+        materialService.applyStocktake(id, request.actualStock(), request.reason(),
+                request.transactionDate(), request.isPeriodic());
         return MaterialResponse.from(materialService.getById(id));
     }
 
     @PostMapping("/{id}/stock")
-    public ResponseEntity<Void> adjustStock(@PathVariable Long id, @Valid @RequestBody StockAdjustRequest request) {
-        materialService.adjustStock(id, request.type(), request.quantity(), request.reason(), request.transactionDate());
+    public ResponseEntity<Void> moveStock(@PathVariable Long id, @Valid @RequestBody StockMovementRequest request) {
+        materialService.moveStock(id, request.type(), request.quantity(), request.reason(), request.transactionDate());
         return ResponseEntity.noContent().build();
     }
 

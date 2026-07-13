@@ -1,8 +1,8 @@
 package com.flakyfilo.material;
 
 import com.flakyfilo.common.BaseTimeEntity;
-import com.flakyfilo.common.MaterialUnit;
 import com.flakyfilo.common.Validate;
+import com.flakyfilo.common.enums.MaterialUnit;
 import com.flakyfilo.common.exception.BusinessException;
 import com.flakyfilo.supplier.Supplier;
 import jakarta.persistence.*;

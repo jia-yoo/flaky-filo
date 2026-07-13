@@ -1,6 +1,6 @@
 package com.flakyfilo.material.dto;
 
-import com.flakyfilo.common.MaterialUnit;
+import com.flakyfilo.common.enums.MaterialUnit;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
