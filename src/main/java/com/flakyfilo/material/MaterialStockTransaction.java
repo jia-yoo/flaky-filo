@@ -1,7 +1,8 @@
 package com.flakyfilo.material;
 
 import com.flakyfilo.common.BaseTimeEntity;
-import com.flakyfilo.common.StockTransactionType;
+import com.flakyfilo.common.enums.StockReasonCode;
+import com.flakyfilo.common.enums.StockTransactionType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -31,7 +32,12 @@ public class MaterialStockTransaction extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private StockTransactionType type; // 입고/출고/보정 중 뭐였는지
+    private StockTransactionType type; // 방향(IN/OUT/ADJUST_UP/ADJUST_DOWN)
+
+    // 구조화된 사유. 사용자가 고르는 값이 아니라, 어떤 로직 경로로 들어왔는지에 따라 서버가 결정.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reason_code", nullable = false, length = 30)
+    private StockReasonCode reasonCode;
 
     @Column(nullable = false, precision = 12, scale = 3)
     private BigDecimal quantity; // 얼마나 변동됐는지 (항상 양수, 방향은 type이 결정)
@@ -43,20 +49,23 @@ public class MaterialStockTransaction extends BaseTimeEntity {
     private LocalDate transactionDate; // 변동이 일어난 날짜
 
     @Builder(access = AccessLevel.PRIVATE)
-    private MaterialStockTransaction(Material material, StockTransactionType type,
+    private MaterialStockTransaction(Material material, StockTransactionType type, StockReasonCode reasonCode,
                                      BigDecimal quantity, String reason, LocalDate transactionDate) {
         this.material = material;
         this.type = type;
+        this.reasonCode = reasonCode;
         this.quantity = quantity;
         this.reason = reason;
         this.transactionDate = transactionDate != null ? transactionDate : LocalDate.now();
     }
 
     public static MaterialStockTransaction register(Material material, StockTransactionType type,
-                                                    BigDecimal quantity, String reason, LocalDate transactionDate) {
+                                                    StockReasonCode reasonCode, BigDecimal quantity,
+                                                    String reason, LocalDate transactionDate) {
         return MaterialStockTransaction.builder()
                 .material(material)
                 .type(type)
+                .reasonCode(reasonCode)
                 .quantity(quantity)
                 .reason(reason)
                 .transactionDate(transactionDate)

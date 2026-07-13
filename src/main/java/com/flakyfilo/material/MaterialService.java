@@ -1,8 +1,9 @@
 package com.flakyfilo.material;
 
 import com.flakyfilo.common.EntityFinder;
-import com.flakyfilo.common.MaterialUnit;
-import com.flakyfilo.common.StockTransactionType;
+import com.flakyfilo.common.enums.MaterialUnit;
+import com.flakyfilo.common.enums.StockReasonCode;
+import com.flakyfilo.common.enums.StockTransactionType;
 import com.flakyfilo.common.exception.BusinessException;
 import com.flakyfilo.supplier.Supplier;
 import com.flakyfilo.supplier.SupplierRepository;
@@ -66,32 +67,54 @@ public class MaterialService {
 
     /**
      * 원재료 입고 / 폐기·손실 처리 (IN, OUT만 - 보정은 applyStocktake로 분리됨).
+     * reasonCode는 사용자가 고르지 않고, "이 메서드(=수동 등록 경로)로 들어왔다"는 사실 자체로 결정된다.
+     * (생산으로 인한 자동 소진은 ProductService가 별도로 PRODUCTION_CONSUMPTION을 부여하며 이 메서드를 거치지 않는다)
      */
     @Transactional
-    public void adjustStock(Long materialId, StockTransactionType type, BigDecimal quantity,
+    public void moveStock(Long materialId, StockTransactionType type, BigDecimal quantity,
                             String reason, LocalDate transactionDate) {
         Material material = findOrThrow(materialId);
 
-        switch (type) {
-            case IN -> material.increaseStock(quantity);
-            case OUT -> material.decreaseStock(quantity);
-        }
+        StockReasonCode reasonCode = switch (type) {
+            case IN -> {
+                material.increaseStock(quantity);
+                yield StockReasonCode.PURCHASE;
+            }
+            case OUT -> {
+                material.decreaseStock(quantity);
+                yield StockReasonCode.DISPOSAL;
+            }
+            case ADJUST_UP, ADJUST_DOWN ->
+                    throw new BusinessException("보정은 실사(stocktake) API를 사용하세요.");
+        };
 
-        transactionRepository.save(MaterialStockTransaction.register(material, type, quantity, reason, transactionDate));
+        transactionRepository.save(
+                MaterialStockTransaction.register(material, type, reasonCode, quantity, reason, transactionDate));
     }
 
     /**
      * 재고 실사 반영. "지금 실제로 몇 개인지"(절대값)를 받아서 시스템 값과의 차이를 자동 계산한다.
+     * isPeriodic: 정기 실사(월말 등)인지, 그때그때 바로잡은 수시 보정인지 - 시스템이 판단 못 하는
+     * "의도"의 문제라 사용자가 직접 선택한 값을 그대로 받는다.
      */
     @Transactional
-    public void applyStocktake(Long materialId, BigDecimal actualStock, String reason, LocalDate transactionDate) {
+    public void applyStocktake(Long materialId, BigDecimal actualStock, String reason,
+                               LocalDate transactionDate, boolean isPeriodic) {
         Material material = findOrThrow(materialId);
         BigDecimal delta = material.applyStocktake(actualStock);
 
-        if (delta.compareTo(BigDecimal.ZERO) == 0) return; // 변동 없으면 이력 안 남김
+        if (delta.compareTo(BigDecimal.ZERO) == 0) return;
 
-        StockTransactionType type = delta.signum() > 0 ? StockTransactionType.ADJUST_UP : StockTransactionType.ADJUST_DOWN;
-        transactionRepository.save(MaterialStockTransaction.register(material, type, delta.abs(), reason, transactionDate));
+        StockTransactionType type = delta.signum() > 0
+                ? StockTransactionType.ADJUST_UP
+                : StockTransactionType.ADJUST_DOWN;
+
+        StockReasonCode reasonCode = isPeriodic
+                ? StockReasonCode.PERIODIC_STOCKTAKE
+                : StockReasonCode.AD_HOC_CORRECTION;
+
+        transactionRepository.save(MaterialStockTransaction.register(
+                material, type, reasonCode, delta.abs(), reason, transactionDate));
     }
 
     @Transactional
@@ -101,8 +124,9 @@ public class MaterialService {
         materialRepository.delete(material);
     }
 
-    public List<MaterialStockTransaction> getTransactionHistory(Long materialId) {
-        return transactionRepository.findByMaterialIdOrderByCreatedAtDesc(materialId);
+    public List<MaterialStockTransaction> getTransactionHistory(Long materialId, LocalDate from, LocalDate to) {
+        return transactionRepository.findByMaterialIdAndTransactionDateBetweenOrderByTransactionDateDesc(
+                materialId, from, to);
     }
 
     // supplierId가 null이면 "아직 구매처 모름"으로 허용, 값이 있으면 실존 여부 확인
