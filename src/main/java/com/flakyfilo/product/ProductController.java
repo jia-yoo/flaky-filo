@@ -1,0 +1,69 @@
+package com.flakyfilo.product;
+
+import com.flakyfilo.product.dto.*;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/products")
+@RequiredArgsConstructor
+public class ProductController {
+
+    private static final Long DEFAULT_STORE_ID = 1L;
+    private final ProductService productService;
+
+    @PostMapping
+    public ResponseEntity<ProductResponse> create(@Valid @RequestBody ProductCreateRequest request) {
+        Product product = productService.register(
+                request.storeId(), request.name(), request.category(), request.price(),
+                request.yieldCount(), request.overheadRate(), request.targetCostRatio());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
+    }
+
+    @GetMapping
+    public List<ProductResponse> getAll() {
+        return productService.getAll(DEFAULT_STORE_ID).stream().map(ProductResponse::from).toList();
+    }
+
+    @GetMapping("/{id}")
+    public ProductResponse getById(@PathVariable Long id) {
+        return ProductResponse.from(productService.getById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ProductResponse update(@PathVariable Long id, @Valid @RequestBody ProductUpdateRequest request) {
+        productService.updateInfo(id, request.name(), request.category(), request.price(),
+                request.yieldCount(), request.overheadRate(), request.targetCostRatio());
+        return ProductResponse.from(productService.getById(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        productService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/recipe")
+    public List<RecipeItemResponse> getRecipe(@PathVariable Long id) {
+        return productService.getRecipe(id).stream().map(RecipeItemResponse::from).toList();
+    }
+
+    @PutMapping("/{id}/recipe")
+    public List<RecipeItemResponse> updateRecipe(@PathVariable Long id, @Valid @RequestBody RecipeUpdateRequest request) {
+        List<ProductService.RecipeItem> items = request.items().stream()
+                .map(item -> new ProductService.RecipeItem(item.materialId(), item.batchQuantity()))
+                .toList();
+        productService.setRecipe(id, items);
+        return productService.getRecipe(id).stream().map(RecipeItemResponse::from).toList();
+    }
+
+    @GetMapping("/{id}/cost")
+    public CostResponse getCost(@PathVariable Long id) {
+        return CostResponse.from(productService.calculateCost(id));
+    }
+}

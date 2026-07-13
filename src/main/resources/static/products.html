@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>완제품 관리 - Flaky Filo</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Alfa+Slab+One&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="topbar-placeholder"></div>
+<script src="js/common.js"></script>
+
+<main class="page">
+    <div class="page-header">
+        <h1>완제품 관리</h1>
+        <p>완제품을 등록하고, 레시피(BOM)를 넣어보면서 원가를 확인하세요.</p>
+    </div>
+
+    <!-- 등록/수정 폼 -->
+    <section class="card" id="product-form-card" style="margin-bottom: 24px;">
+        <h3 id="form-title" style="margin-bottom: 16px;">완제품 등록</h3>
+        <form id="product-form">
+            <input id="product-id" type="hidden">
+            <div class="form-grid">
+                <div>
+                    <label for="name">완제품명</label>
+                    <input id="name" placeholder="예: 크로와상" required type="text">
+                </div>
+                <div>
+                    <label for="category">카테고리</label>
+                    <input id="category" placeholder="예: 페스츄리" type="text">
+                </div>
+                <div>
+                    <label for="price">판매가 (원)</label>
+                    <input id="price" min="0" placeholder="아직 미정이면 0" type="number">
+                </div>
+                <div>
+                    <label for="yieldCount">레시피 1회당 나오는 개수</label>
+                    <input id="yieldCount" min="1" placeholder="예: 6" type="number" value="1">
+                </div>
+                <div>
+                    <label for="overheadRate">기타경비율 (%)</label>
+                    <input id="overheadRate" min="0" placeholder="예: 10" step="0.1" type="number" value="10">
+                </div>
+                <div>
+                    <label for="targetCostRatio">목표 원가율 (%)</label>
+                    <input id="targetCostRatio" min="1" placeholder="예: 40" step="0.1" type="number" value="40">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" id="submit-btn" type="submit">등록</button>
+                <button class="btn-ghost" id="cancel-edit-btn" style="display:none;" type="button">취소</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- 목록 -->
+    <section class="card">
+        <h3 style="margin-bottom:16px;">완제품 목록</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>이름</th>
+                <th>카테고리</th>
+                <th>판매가</th>
+                <th>원가</th>
+                <th>원가율</th>
+                <th>최소판매가</th>
+                <th>재고</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody id="product-table-body"></tbody>
+        </table>
+
+        <div class="empty-state" id="empty-state" style="display:none;">
+            등록된 완제품이 없어요. 위 폼에서 첫 완제품을 등록해보세요.
+        </div>
+    </section>
+</main>
+
+<!-- 완제품 상세 (레시피 + 원가) 모달 -->
+<dialog id="recipe-dialog" style="width: 640px;">
+    <h3 id="recipe-dialog-title" style="margin-bottom: 16px;">완제품 상세</h3>
+
+    <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div>
+            <label for="rd-price">판매가 (원)</label>
+            <input id="rd-price" min="0" type="number">
+        </div>
+        <div>
+            <label for="rd-yield">나오는 개수</label>
+            <input id="rd-yield" min="1" type="number">
+        </div>
+        <div>
+            <label for="rd-overhead">기타경비율 (%)</label>
+            <input id="rd-overhead" min="0" step="0.1" type="number">
+        </div>
+        <div>
+            <label for="rd-target">목표 원가율 (%)</label>
+            <input id="rd-target" min="1" step="0.1" type="number">
+        </div>
+    </div>
+
+    <datalist id="materials-datalist">
+        <!-- JS가 등록된 원재료 이름으로 옵션을 채워넣음 (검색 가능한 자동완성용) -->
+    </datalist>
+
+    <div style="margin: 16px 0 8px; font-size:13px; color:var(--text-secondary); display:flex; gap:8px;">
+        <span style="flex:2;">재료</span>
+        <span style="flex:1;">배치 필요량</span>
+        <span style="flex:1;">개당 필요량</span>
+        <span style="flex:1;">개당 원가</span>
+        <span style="width:40px;"></span>
+    </div>
+    <div id="recipe-rows"></div>
+    <button class="btn-ghost btn-sm" id="add-recipe-row-btn" style="margin: 8px 0 18px;" type="button">+ 재료 추가</button>
+
+    <!-- 원가 계산 결과 - 입력하는 즉시 실시간으로 갱신됨 (저장 전에도 바로 보임) -->
+    <div class="cost-summary" id="cost-summary">
+        <div class="cost-row"><span>원가 (개당)</span><span id="cost-raw"></span></div>
+        <div class="cost-row"><span>기타경비</span><span id="cost-overhead"></span></div>
+        <div class="cost-row cost-row-strong"><span>총원가</span><span id="cost-total"></span></div>
+        <div class="cost-row"><span>원가율</span><span id="cost-ratio"></span></div>
+        <div class="cost-row"><span>최소판매가</span><span id="cost-min-price"></span></div>
+        <div class="cost-row cost-row-strong"><span>마진 (판매가 기준)</span><span id="cost-margin"></span></div>
+    </div>
+
+    <div class="form-actions" style="margin-top:18px;">
+        <button class="btn-primary" id="save-recipe-btn" type="button">저장</button>
+        <button class="btn-ghost" id="recipe-dialog-close-btn" type="button">닫기</button>
+    </div>
+</dialog>
+
+
+<!-- 생산 등록 & 이력 모달 -->
+<dialog id="production-dialog" style="width: 480px;">
+    <h3 id="production-dialog-title" style="margin-bottom: 16px;">생산 등록</h3>
+
+    <form id="production-form" style="margin-bottom: 20px;">
+        <input id="production-product-id" type="hidden">
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+            <div>
+                <label for="production-date">생산일</label>
+                <input id="production-date" required type="date">
+            </div>
+            <div>
+                <label for="production-quantity">생산 수량 (개)</label>
+                <input id="production-quantity" min="1" required type="number">
+            </div>
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label for="production-note">메모</label>
+            <input id="production-note" placeholder="예: 오전 베이킹" type="text">
+        </div>
+        <button class="btn-primary" type="submit">등록 (레시피 기준 원재료 자동 차감)</button>
+    </form>
+
+    <h3 style="font-size:14px; margin-bottom:10px;">최근 생산 이력</h3>
+    <div id="production-history-list" style="max-height:220px; overflow-y:auto;"></div>
+
+    <div class="form-actions" style="margin-top:16px;">
+        <button class="btn-ghost" id="production-dialog-close-btn" type="button">닫기</button>
+    </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/products.js"></script>
+</body>
+</html>
