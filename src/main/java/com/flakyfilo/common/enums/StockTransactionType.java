@@ -1,4 +1,4 @@
-package com.flakyfilo.common;
+package com.flakyfilo.common.enums;
 
 /**
  * 원재료/완제품 공통 재고 변동 타입.
