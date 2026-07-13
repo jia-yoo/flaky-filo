@@ -86,6 +86,11 @@ a {
     color: var(--accent);
 }
 
+.nav-links a.active {
+    color: var(--accent);
+    font-weight: 600;
+}
+
 /* ===== 공통 레이아웃 ===== */
 .page {
     max-width: 1080px;
@@ -370,6 +375,59 @@ tbody tr:hover {
 
 .back-link:hover {
     color: var(--accent);
+}
+
+/* ===== 완제품 레시피/원가 모달 ===== */
+.recipe-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.recipe-row select {
+    flex: 2;
+}
+
+.recipe-row input {
+    flex: 1;
+}
+
+.recipe-row .unit-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    width: 28px;
+}
+
+.cost-summary {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-top: 4px;
+}
+
+.cost-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 5px 0;
+    color: var(--text-secondary);
+}
+
+.cost-row-strong {
+    font-weight: 600;
+    color: var(--text-primary);
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    padding-top: 9px;
+}
+
+.cost-positive {
+    color: var(--success);
+}
+
+.cost-negative {
+    color: var(--danger);
 }
 
 /* ===== 안내 문구 (빈 상태 / 에러) ===== */
