@@ -13,6 +13,8 @@ public record ProductCreateRequest(
         @PositiveOrZero int price,
         Integer yieldCount,          // null이면 서버가 기본값 1로 처리
         BigDecimal overheadRate,     // null이면 서버가 기본값 0.10으로 처리
-        BigDecimal targetCostRatio   // null이면 서버가 기본값 0.40으로 처리
+        BigDecimal targetCostRatio,  // null이면 서버가 기본값 0.40으로 처리
+        Boolean active,              // null이면 기본값 true (판매중)
+        Boolean autoDisposeIfUnsold  // null이면 기본값 true (이월 메뉴)
 ) {
 }

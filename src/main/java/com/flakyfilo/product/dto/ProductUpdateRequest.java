@@ -13,6 +13,8 @@ public record ProductUpdateRequest(
         @PositiveOrZero int price,
         @NotNull @Positive Integer yieldCount,
         @NotNull BigDecimal overheadRate,
-        @NotNull BigDecimal targetCostRatio
+        @NotNull BigDecimal targetCostRatio,
+        boolean active,
+        boolean autoDisposeIfUnsold
 ) {
 }

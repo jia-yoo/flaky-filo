@@ -22,7 +22,8 @@ public class ProductController {
     public ResponseEntity<ProductResponse> create(@Valid @RequestBody ProductCreateRequest request) {
         Product product = productService.register(
                 request.storeId(), request.name(), request.category(), request.price(),
-                request.yieldCount(), request.overheadRate(), request.targetCostRatio());
+                request.yieldCount(), request.overheadRate(), request.targetCostRatio(),
+                request.active(), request.autoDisposeIfUnsold());
         return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
     }
 
@@ -39,8 +40,22 @@ public class ProductController {
     @PutMapping("/{id}")
     public ProductResponse update(@PathVariable Long id, @Valid @RequestBody ProductUpdateRequest request) {
         productService.updateInfo(id, request.name(), request.category(), request.price(),
-                request.yieldCount(), request.overheadRate(), request.targetCostRatio());
+                request.yieldCount(), request.overheadRate(), request.targetCostRatio(),
+                request.active(), request.autoDisposeIfUnsold());
         return ProductResponse.from(productService.getById(id));
+    }
+
+    // 일일 생산/마감 화면 전용 - 판매중인 것만
+    @GetMapping("/active")
+    public List<ProductResponse> getActiveProducts() {
+        return productService.getActiveProducts(DEFAULT_STORE_ID).stream().map(ProductResponse::from).toList();
+    }
+
+    // 마감 즉시 폐기 (기존 ReserveStockRequest 재사용 - quantity 하나만 있으면 됨)
+    @PostMapping("/{id}/dispose-stock")
+    public ResponseEntity<Void> disposeStock(@PathVariable Long id, @Valid @RequestBody ReserveStockRequest request) {
+        productService.disposeStock(id, request.quantity());
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")

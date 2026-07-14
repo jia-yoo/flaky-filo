@@ -16,6 +16,8 @@ public record ProductResponse(
         int yieldCount,
         BigDecimal overheadRate,
         BigDecimal targetCostRatio,
+        boolean active,
+        boolean autoDisposeIfUnsold,
         LocalDateTime createdAt
 ) {
     public static ProductResponse from(Product product) {
@@ -30,6 +32,8 @@ public record ProductResponse(
                 product.getYieldCount(),
                 product.getOverheadRate(),
                 product.getTargetCostRatio(),
+                product.isActive(),
+                product.isAutoDisposeIfUnsold(),
                 product.getCreatedAt()
         );
     }

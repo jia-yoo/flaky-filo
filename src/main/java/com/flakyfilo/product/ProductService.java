@@ -26,9 +26,11 @@ public class ProductService {
 
     @Transactional
     public Product register(Long storeId, String name, String category, int price,
-                             Integer yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio) {
+                            Integer yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
+                            Boolean active, Boolean autoDisposeIfUnsold) {
         return productRepository.save(Product.register(
-                storeId, name, category, price, yieldCount, overheadRate, targetCostRatio));
+                storeId, name, category, price, yieldCount, overheadRate, targetCostRatio,
+                active, autoDisposeIfUnsold));
     }
 
     public Product getById(Long productId) {
@@ -39,11 +41,18 @@ public class ProductService {
         return productRepository.findByStoreId(storeId);
     }
 
+    /** 일일 생산/마감 화면 전용 - 판매중인 것만 */
+    public List<Product> getActiveProducts(Long storeId) {
+        return productRepository.findByStoreIdAndActiveTrue(storeId);
+    }
+
     @Transactional
     public void updateInfo(Long productId, String name, String category, int price,
-                            int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio) {
+                           int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
+                           boolean active, boolean autoDisposeIfUnsold) {
         Product product = findOrThrow(productId);
-        product.updateInfo(name, category, price, yieldCount, overheadRate, targetCostRatio);
+        product.updateInfo(name, category, price, yieldCount, overheadRate, targetCostRatio,
+                active, autoDisposeIfUnsold);
     }
 
     @Transactional
@@ -110,6 +119,13 @@ public class ProductService {
     public void wasteReservedStock(Long productId, int quantity) {
         Product product = findOrThrow(productId);
         product.wasteReservedStock(quantity);
+    }
+
+    /** 마감 즉시 폐기 - 보류를 거치지 않고 당일 남은 재고를 바로 버림 (autoDisposeIfUnsold 메뉴용). */
+    @Transactional
+    public void disposeStock(Long productId, int quantity) {
+        Product product = findOrThrow(productId);
+        product.disposeStock(quantity);
     }
 
     /** 채널별 가격 등록/수정 (있으면 갱신, 없으면 새로 생성 - "upsert"). */

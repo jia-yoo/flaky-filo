@@ -58,10 +58,21 @@ public class Product extends BaseTimeEntity {
     private BigDecimal targetCostRatio = new BigDecimal("0.40");
 
 
-    //reservedStock → 사용자가 절대 직접 지정하지 않는 시스템 상태값 → 생성자에 없음.
+    /** 지금 실제로 판매 중인 메뉴인지. 일일 생산/마감 화면에는 이게 true인 것만 나열된다. */
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
+    /**
+     * 당일 안 팔리면 원칙적으로 폐기하는 메뉴인지 (생크림 케이크 등). false면 식빵처럼 다음날도 그대로 파는 메뉴.
+     * 마감 화면에서 이 값에 따라 기본 액션(폐기 vs 이월)이 미리 선택되어 보인다 - 확정은 그때 사람이 한다.
+     */
+    @Column(name = "auto_dispose_if_unsold", nullable = false)
+    private boolean autoDisposeIfUnsold = true;
+
     @Builder(access = AccessLevel.PRIVATE)
     private Product(Long storeId, String name, String category, int price,
-                    int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio) {
+                    int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
+                    boolean active, boolean autoDisposeIfUnsold) {
         this.storeId = storeId;
         this.name = name;
         this.category = category;
@@ -69,10 +80,13 @@ public class Product extends BaseTimeEntity {
         this.yieldCount = yieldCount;
         this.overheadRate = overheadRate;
         this.targetCostRatio = targetCostRatio;
+        this.active = active;
+        this.autoDisposeIfUnsold = autoDisposeIfUnsold;
     }
 
     public static Product register(Long storeId, String name, String category, int price,
-                                   Integer yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio) {
+                                   Integer yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
+                                   Boolean active, Boolean autoDisposeIfUnsold) {
         Validate.notBlank(name, "완제품명");
         return Product.builder()
                 .storeId(storeId)
@@ -82,21 +96,24 @@ public class Product extends BaseTimeEntity {
                 .yieldCount(yieldCount != null ? yieldCount : 1)
                 .overheadRate(overheadRate != null ? overheadRate : new BigDecimal("0.10"))
                 .targetCostRatio(targetCostRatio != null ? targetCostRatio : new BigDecimal("0.40"))
+                .active(active == null || active) // 기본값 true
+                .autoDisposeIfUnsold(autoDisposeIfUnsold != null && autoDisposeIfUnsold) // 기본값 false
                 .build();
     }
 
     public void updateInfo(String name, String category, int price,
-                           int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio) {
+                           int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
+                           boolean active, boolean autoDisposeIfUnsold) {
         Validate.notBlank(name, "완제품명");
-        if (yieldCount < 1) {
-            throw new BusinessException("나오는 개수는 1개 이상이어야 합니다.");
-        }
+        Validate.strictlyPositive(yieldCount, "나오는 개수");
         this.name = name;
         this.category = category;
         this.price = price;
         this.yieldCount = yieldCount;
         this.overheadRate = overheadRate;
         this.targetCostRatio = targetCostRatio;
+        this.active = active;
+        this.autoDisposeIfUnsold = autoDisposeIfUnsold;
     }
 
     public void increaseStock(int quantity) {
@@ -117,6 +134,11 @@ public class Product extends BaseTimeEntity {
     public void reserveStock(int quantity) {
         decreaseStock(quantity); // currentStock에서 빠짐 (부족하면 예외)
         this.reservedStock += quantity;
+    }
+
+    /** 마감 즉시 폐기: 보류를 거치지 않고 당일 남은 재고를 곧바로 버린다 (autoDisposeIfUnsold=true인 메뉴용). */
+    public void disposeStock(int quantity) {
+        decreaseStock(quantity); // currentStock에서 바로 차감, reservedStock은 안 건드림
     }
 
     /** 보류 재고를 다른 완제품으로 전환하거나 생산에 활용할 때 그만큼 차감 (ProductionService에서 사용). */

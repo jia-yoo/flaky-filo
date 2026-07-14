@@ -49,6 +49,20 @@
                     <label for="targetCostRatio">목표 원가율 (%)</label>
                     <input id="targetCostRatio" min="1" placeholder="예: 40" step="0.1" type="number" value="40">
                 </div>
+                <div>
+                    <label for="isActive">판매 상태</label>
+                    <label class="checkbox-chip" for="isActive">
+                        <input checked id="isActive" type="checkbox">
+                        판매중인 메뉴
+                    </label>
+                </div>
+                <div>
+                    <label for="autoDisposeIfUnsold">당일 폐기 여부</label>
+                    <label class="checkbox-chip" for="autoDisposeIfUnsold">
+                        <input checked id="autoDisposeIfUnsold" type="checkbox">
+                        안 팔리면 폐기
+                    </label>
+                </div>
             </div>
             <div class="form-actions">
                 <button class="btn-primary" id="submit-btn" type="submit">등록</button>
@@ -67,22 +81,24 @@
                 </select>
             </div>
         </div>
-        <table>
-            <thead>
-            <tr>
-                <th>이름</th>
-                <th>카테고리</th>
-                <th>판매가</th>
-                <th>원가</th>
-                <th>원가율</th>
-                <th>최소판매가</th>
-                <th>재고</th>
-                <th>보류재고</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody id="product-table-body"></tbody>
-        </table>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>카테고리</th>
+                    <th>판매가</th>
+                    <th>원가</th>
+                    <th>원가율</th>
+                    <th>재고</th>
+                    <th>보류재고</th>
+                    <th>상태</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody id="product-table-body"></tbody>
+            </table>
+        </div>
 
         <p id="product-result-count" style="font-size:12px; color:var(--text-secondary); margin-top:12px;"></p>
 
@@ -167,19 +183,18 @@
 </dialog>
 
 <dialog id="reserve-dialog" style="width: 400px;">
-    <h3 id="reserve-dialog-title" style="margin-bottom: 16px;">마감 보류</h3>
+    <h3 id="reserve-dialog-title" style="margin-bottom: 16px;">보류 재고 폐기</h3>
+    <p style="font-size:12px; color:var(--text-secondary); margin:-8px 0 16px;">
+        결국 못 쓰게 된 보류 재고를 폐기해요. (마감 시 새로 보류하는 건 "일일 운영" 화면에서 해요.)
+    </p>
     <form id="reserve-form">
         <input id="reserve-product-id" type="hidden">
-        <div class="type-toggle">
-            <button class="reserve-type-btn active" data-action="reserve" type="button">보류 (판매 재고에서 빼기)</button>
-            <button class="reserve-type-btn" data-action="waste" type="button">보류 폐기 (완전히 버림)</button>
-        </div>
         <div style="margin-bottom: 18px;">
-            <label for="reserve-quantity">수량 (개)</label>
+            <label for="reserve-quantity">폐기 수량 (개)</label>
             <input id="reserve-quantity" min="1" required type="number">
         </div>
         <div class="form-actions">
-            <button class="btn-primary" type="submit">처리</button>
+            <button class="btn-primary" type="submit">폐기 처리</button>
             <button class="btn-ghost" id="reserve-dialog-close-btn" type="button">닫기</button>
         </div>
     </form>
