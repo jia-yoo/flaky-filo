@@ -242,6 +242,36 @@ input:focus, select:focus, textarea:focus {
     align-items: center;
 }
 
+/* 등록 폼의 체크박스 옵션 - form-grid 안에서 다른 입력칸이랑 같은 리듬으로 보이게 */
+.checkbox-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    width: 100%;
+}
+
+.checkbox-chip input {
+    width: auto;
+    margin: 0;
+}
+
+/* 목록 테이블의 "상태" 컬럼 - 배지 두 개를 한 줄에 나란히 (다른 칸들과 줄 높이 맞춤) */
+.status-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    white-space: nowrap;
+}
+
 /* ===== 버튼 ===== */
 button {
     font-family: inherit;
@@ -291,6 +321,10 @@ button {
 }
 
 /* ===== 테이블 ===== */
+.table-scroll {
+    overflow-x: auto;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -354,6 +388,11 @@ tbody tr:hover {
 .badge-gold {
     background: #F7EFDC;
     color: #8A6A1E;
+}
+
+.badge-info {
+    background: #E7EEF7;
+    color: #34588A;
 }
 
 .qty-plus {

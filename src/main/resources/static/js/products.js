@@ -121,7 +121,6 @@ function renderTable(products) {
 
         const rawCostText = p.cost ? `${Math.round(p.cost.rawCost).toLocaleString()}원` : "-";
         const ratioText = p.cost && p.cost.costRatio != null ? `${(p.cost.costRatio * 100).toFixed(1)}%` : "-";
-        const minPriceText = p.cost ? `${Math.round(p.cost.minPrice).toLocaleString()}원` : "-";
 
         tr.innerHTML = `
             <td><a href="#" onclick="openDetailDialog(${p.id}); return false;" style="color:var(--accent); font-weight:500;">${escapeHtml(p.name)}</a></td>
@@ -129,13 +128,16 @@ function renderTable(products) {
             <td>${p.price.toLocaleString()}원</td>
             <td>${rawCostText}</td>
             <td>${ratioText}</td>
-            <td>${minPriceText}</td>
             <td>${p.currentStock}개</td>
             <td>${p.reservedStock ?? 0}개</td>
+            <td>
+                <div class="status-badges">
+                    ${p.active ? '<span class="badge badge-success">판매중</span>' : '<span class="badge badge-danger">중단</span>'}
+                    ${p.autoDisposeIfUnsold ? '<span class="badge badge-gold">당일폐기</span>' : '<span class="badge badge-info">이월</span>'}
+                </div>
+            </td>
             <td class="actions-cell">
-                <button class="btn-ghost btn-sm" onclick="openProductionDialog(${p.id}, '${escapeHtml(p.name)}')">생산 등록</button>
-                <button class="btn-ghost btn-sm" onclick="openReserveDialog(${p.id}, '${escapeHtml(p.name)}')">마감 보류</button>
-                <button class="btn-ghost btn-sm" onclick="openDetailDialog(${p.id})">상세보기</button>
+                <button class="btn-ghost btn-sm" onclick="openReserveDialog(${p.id}, '${escapeHtml(p.name)}')">보류 재고 폐기</button>
                 <button class="btn-ghost btn-sm" onclick="startEdit(${p.id})">수정</button>
                 <button class="btn-danger-text" onclick="deleteProduct(${p.id})">삭제</button>
             </td>
@@ -162,6 +164,8 @@ form.addEventListener("submit", async (e) => {
         yieldCount: Number(document.getElementById("yieldCount").value || 1),
         overheadRate: Number(document.getElementById("overheadRate").value || 0) / 100,
         targetCostRatio: Number(document.getElementById("targetCostRatio").value || 40) / 100,
+        active: document.getElementById("isActive").checked,
+        autoDisposeIfUnsold: document.getElementById("autoDisposeIfUnsold").checked,
     };
 
     const editingId = idInput.value;
@@ -201,6 +205,8 @@ async function startEdit(id) {
         document.getElementById("yieldCount").value = p.yieldCount;
         document.getElementById("overheadRate").value = (p.overheadRate * 100).toFixed(1);
         document.getElementById("targetCostRatio").value = (p.targetCostRatio * 100).toFixed(1);
+        document.getElementById("isActive").checked = p.active;
+        document.getElementById("autoDisposeIfUnsold").checked = p.autoDisposeIfUnsold;
 
         formTitle.textContent = "완제품 수정";
         submitBtn.textContent = "수정 완료";
@@ -358,7 +364,7 @@ document.getElementById("save-recipe-btn").addEventListener("click", async () =>
 
     try {
         // 1. 완제품 재무 정보(판매가, 나오는 개수, 기타경비율, 목표원가율) 저장
-        //    name/category 이 모달에서 안 건드리니 기존 값을 그대로 유지
+        //    name/category는 이 모달에서 안 건드리니 기존 값을 그대로 유지
         const productPayload = {
             name: currentProduct.name,
             category: currentProduct.category,
@@ -411,43 +417,26 @@ async function refreshCostSummary(productId) {
     marginEl.className = cost.margin >= 0 ? "cost-positive" : "cost-negative";
 }
 
-// ===================== 마감 보류 / 보류 폐기 모달 =====================
+// ===================== 보류 재고 폐기 모달 =====================
 const reserveDialog = document.getElementById("reserve-dialog");
 const reserveForm = document.getElementById("reserve-form");
 const reserveProductId = document.getElementById("reserve-product-id");
-let selectedReserveAction = "reserve";
 
 function openReserveDialog(productId, productName) {
     reserveProductId.value = productId;
     reserveForm.reset();
-    selectedReserveAction = "reserve";
-    updateReserveTypeToggleUI();
-    document.getElementById("reserve-dialog-title").textContent = `${productName} - 마감 보류`;
+    document.getElementById("reserve-dialog-title").textContent = `${productName} - 보류 재고 폐기`;
     reserveDialog.showModal();
 }
 
 document.getElementById("reserve-dialog-close-btn").addEventListener("click", () => reserveDialog.close());
 
-document.querySelectorAll(".reserve-type-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-        selectedReserveAction = btn.dataset.action;
-        updateReserveTypeToggleUI();
-    });
-});
-
-function updateReserveTypeToggleUI() {
-    document.querySelectorAll(".reserve-type-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.action === selectedReserveAction);
-    });
-}
-
 reserveForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const quantity = Number(document.getElementById("reserve-quantity").value);
-    const endpoint = selectedReserveAction === "reserve" ? "reserve-stock" : "waste-reserved-stock";
 
     try {
-        const response = await fetch(`${API_BASE}/${reserveProductId.value}/${endpoint}`, {
+        const response = await fetch(`${API_BASE}/${reserveProductId.value}/waste-reserved-stock`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ quantity }),
@@ -456,7 +445,7 @@ reserveForm.addEventListener("submit", async (e) => {
             const error = await response.json();
             throw new Error(error.message);
         }
-        showToast(selectedReserveAction === "reserve" ? "보류 처리됐어요." : "보류 재고가 폐기됐어요.");
+        showToast("보류 재고가 폐기됐어요.");
         reserveDialog.close();
         loadProducts();
     } catch (err) {
