@@ -2,6 +2,7 @@ package com.flakyfilo.product;
 
 import com.flakyfilo.common.EntityFinder;
 import com.flakyfilo.common.Validate;
+import com.flakyfilo.common.enums.OrderChannel;
 import com.flakyfilo.material.Material;
 import com.flakyfilo.material.MaterialRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class ProductService {
     private final ProductRecipeRepository recipeRepository;
     private final ProductConversionRecipeRepository conversionRecipeRepository;
     private final MaterialRepository materialRepository;
+    private final ProductChannelPriceRepository channelPriceRepository;
 
     @Transactional
     public Product register(Long storeId, String name, String category, int price,
@@ -108,6 +110,30 @@ public class ProductService {
     public void wasteReservedStock(Long productId, int quantity) {
         Product product = findOrThrow(productId);
         product.wasteReservedStock(quantity);
+    }
+
+    /** 채널별 가격 등록/수정 (있으면 갱신, 없으면 새로 생성 - "upsert"). */
+    @Transactional
+    public void setChannelPrice(Long productId, OrderChannel channel, int price) {
+        Product product = findOrThrow(productId);
+        ProductChannelPrice existing = channelPriceRepository.findByProductIdAndChannel(productId, channel)
+                .orElse(null);
+
+        if (existing != null) {
+            existing.updatePrice(price);
+        } else {
+            channelPriceRepository.save(ProductChannelPrice.register(product, channel, price));
+        }
+    }
+
+    /** 채널별 가격 삭제 - 삭제하면 그 채널은 다시 Product.price(매장 기본가)를 따르게 됨. */
+    @Transactional
+    public void removeChannelPrice(Long productId, OrderChannel channel) {
+        channelPriceRepository.deleteByProductIdAndChannel(productId, channel);
+    }
+
+    public List<ProductChannelPrice> getChannelPrices(Long productId) {
+        return channelPriceRepository.findByProductId(productId);
     }
 
     /**

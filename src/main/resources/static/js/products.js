@@ -293,6 +293,11 @@ async function openDetailDialog(productId) {
             document.getElementById("conversion-source-select").value = "";
         }
 
+        // 채널별 가격 - 등록된 예외 가격이 있으면 미리 채워서 보여줌
+        const channelPrices = await fetch(`${API_BASE}/${productId}/channel-prices`)
+            .then((res) => res.ok ? res.json() : []);
+        renderChannelPriceRows(channelPrices);
+
         recipeDialog.showModal();
     } catch (err) {
         showToast(err.message, true);
@@ -553,6 +558,49 @@ document.getElementById("save-conversion-btn").addEventListener("click", async (
         });
         if (!response.ok) throw new Error((await response.json()).message);
         showToast("전환 레시피가 저장됐어요.");
+    } catch (err) {
+        showToast(err.message, true);
+    }
+});
+
+// ===================== 채널별 가격 (완제품 상세 모달 내) =====================
+// STORE(매장)는 위쪽 "판매가"(rd-price)가 곧 기본값이라 여기선 예외 채널만 다룸
+const CHANNEL_LABELS = { NAVER: "네이버", COUPANG: "쿠팡", BAEMIN: "배민" };
+
+function renderChannelPriceRows(existingPrices) {
+    const container = document.getElementById("channel-price-rows");
+    container.innerHTML = Object.entries(CHANNEL_LABELS).map(([channel, label]) => {
+        const existing = existingPrices.find((cp) => cp.channel === channel);
+        return `
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <span style="width:50px; font-size:13px;">${label}</span>
+                <input type="number" min="0" class="channel-price-input" data-channel="${channel}"
+                       placeholder="비우면 기본 판매가 사용" value="${existing ? existing.price : ""}" style="flex:1;">
+            </div>
+        `;
+    }).join("");
+}
+
+document.getElementById("save-channel-prices-btn").addEventListener("click", async () => {
+    const inputs = document.querySelectorAll(".channel-price-input");
+
+    try {
+        for (const input of inputs) {
+            const channel = input.dataset.channel;
+            const value = input.value.trim();
+
+            if (value === "") {
+                // 비워두면 "이 채널은 기본 판매가를 쓴다"는 뜻 - 등록된 예외 가격이 있으면 삭제
+                await fetch(`${API_BASE}/${currentProduct.id}/channel-prices/${channel}`, { method: "DELETE" });
+            } else {
+                await fetch(`${API_BASE}/${currentProduct.id}/channel-prices/${channel}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ price: Number(value) }),
+                });
+            }
+        }
+        showToast("채널별 가격이 저장됐어요.");
     } catch (err) {
         showToast(err.message, true);
     }

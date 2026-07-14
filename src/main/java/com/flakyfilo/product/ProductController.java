@@ -1,5 +1,6 @@
 package com.flakyfilo.product;
 
+import com.flakyfilo.common.enums.OrderChannel;
 import com.flakyfilo.product.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -101,5 +102,23 @@ public class ProductController {
     @GetMapping("/{id}/cost")
     public CostResponse getCost(@PathVariable Long id) {
         return CostResponse.from(productService.calculateCost(id));
+    }
+
+    @GetMapping("/{id}/channel-prices")
+    public List<ChannelPriceResponse> getChannelPrices(@PathVariable Long id) {
+        return productService.getChannelPrices(id).stream().map(ChannelPriceResponse::from).toList();
+    }
+
+    @PutMapping("/{id}/channel-prices/{channel}")
+    public ResponseEntity<Void> setChannelPrice(@PathVariable Long id, @PathVariable OrderChannel channel,
+                                                @Valid @RequestBody ChannelPriceRequest request) {
+        productService.setChannelPrice(id, channel, request.price());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/channel-prices/{channel}")
+    public ResponseEntity<Void> removeChannelPrice(@PathVariable Long id, @PathVariable OrderChannel channel) {
+        productService.removeChannelPrice(id, channel);
+        return ResponseEntity.noContent().build();
     }
 }
