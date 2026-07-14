@@ -20,7 +20,8 @@ public class ProductionController {
     @PostMapping
     public ResponseEntity<ProductionLogResponse> register(@Valid @RequestBody ProductionRegisterRequest request) {
         ProductionLog log = productionService.register(
-                request.productId(), request.producedQuantity(), request.productionDate(), request.note());
+                request.productId(), request.producedQuantity(), request.productionDate(),
+                request.productionType(), request.sourceProductId(), request.note());
         return ResponseEntity.status(HttpStatus.CREATED).body(ProductionLogResponse.from(log));
     }
 
