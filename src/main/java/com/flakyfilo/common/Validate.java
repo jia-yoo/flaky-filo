@@ -29,9 +29,23 @@ public class Validate {
         }
     }
 
+    /** 진짜 양수만 허용 (0 제외) - int 버전. Product의 개수(quantity)처럼 BigDecimal이 아닌 값에 사용 */
+    public static void strictlyPositive(int value, String fieldName) {
+        if (value <= 0) {
+            throw new BusinessException(fieldName + "은(는) 0보다 커야 합니다.");
+        }
+    }
+
     /** 0 이상이면 허용 - 실사값, 임계치처럼 "0도 정상적인" 값에 사용 */
     public static void notNegative(BigDecimal value, String fieldName) {
         if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException(fieldName + "은(는) 0 이상이어야 합니다.");
+        }
+    }
+
+    /** 0 이상이면 허용 - int 버전 */
+    public static void notNegative(int value, String fieldName) {
+        if (value < 0) {
             throw new BusinessException(fieldName + "은(는) 0 이상이어야 합니다.");
         }
     }
