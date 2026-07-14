@@ -126,12 +126,3 @@ function escapeHtml(str) {
     div.textContent = str ?? "";
     return div.innerHTML;
 }
-
-let toastTimer;
-function showToast(message, isError = false) {
-    clearTimeout(toastTimer);
-    toast.textContent = message;
-    toast.classList.toggle("error", isError);
-    toast.classList.add("show");
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
-}

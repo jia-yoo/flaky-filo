@@ -437,13 +437,3 @@ stocktakeForm.addEventListener("submit", async (e) => {
         showToast(err.message, true);
     }
 });
-
-// ===== 토스트 알림 =====
-let toastTimer;
-function showToast(message, isError = false) {
-    clearTimeout(toastTimer);
-    toast.textContent = message;
-    toast.classList.toggle("error", isError);
-    toast.classList.add("show");
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
-}
