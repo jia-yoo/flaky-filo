@@ -19,6 +19,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductRecipeRepository recipeRepository;
+    private final ProductConversionRecipeRepository conversionRecipeRepository;
     private final MaterialRepository materialRepository;
 
     @Transactional
@@ -69,6 +70,44 @@ public class ProductService {
 
     public List<ProductRecipe> getRecipe(Long productId) {
         return recipeRepository.findByProductId(productId);
+    }
+
+    /** 전환 레시피(원본→대상 조합별 차이분 재료) 통째로 교체 등록 - setRecipe와 같은 방식(덮어쓰기). */
+    @Transactional
+    public void setConversionRecipe(Long sourceProductId, Long targetProductId, List<RecipeItem> items) {
+        Product source = findOrThrow(sourceProductId);
+        Product target = findOrThrow(targetProductId);
+        conversionRecipeRepository.deleteBySourceProductIdAndTargetProductId(sourceProductId, targetProductId);
+
+        for (RecipeItem item : items) {
+            Validate.strictlyPositive(item.batchQuantity(), "필요량");
+            Material material = EntityFinder.findOrThrow(materialRepository, item.materialId(), "원재료");
+            conversionRecipeRepository.save(
+                    ProductConversionRecipe.register(source, target, material, item.batchQuantity()));
+        }
+    }
+
+    /** 이 완제품에 등록된 전환 레시피를 원본 무관하게 전체 조회 (모달 열 때 자동으로 보여주기 위함). */
+    public List<ProductConversionRecipe> getConversionRecipesByTarget(Long targetProductId) {
+        return conversionRecipeRepository.findByTargetProductId(targetProductId);
+    }
+
+    public List<ProductConversionRecipe> getConversionRecipe(Long sourceProductId, Long targetProductId) {
+        return conversionRecipeRepository.findBySourceAndTarget(sourceProductId, targetProductId);
+    }
+
+    /** 마감 보류: 당일 안 팔린 만큼 판매 재고에서 보류 재고로 옮김. */
+    @Transactional
+    public void reserveStock(Long productId, int quantity) {
+        Product product = findOrThrow(productId);
+        product.reserveStock(quantity);
+    }
+
+    /** 결국 못 쓰게 된 보류 재고 폐기. */
+    @Transactional
+    public void wasteReservedStock(Long productId, int quantity) {
+        Product product = findOrThrow(productId);
+        product.wasteReservedStock(quantity);
     }
 
     /**

@@ -9,8 +9,11 @@ const cancelEditBtn = document.getElementById("cancel-edit-btn");
 const idInput = document.getElementById("product-id");
 const tableBody = document.getElementById("product-table-body");
 const emptyState = document.getElementById("empty-state");
+const productSearchInput = document.getElementById("product-search-input");
+const categoryFilter = document.getElementById("category-filter");
 
 let allMaterials = []; // 재료 검색용 캐시 (id, name, unit, unitCost 등)
+let allProductsWithCost = []; // 완제품+원가 캐시 - 검색/필터는 재요청 없이 여기서 처리
 const UNIT_LABELS = { KG: "kg", G: "g", L: "L", ML: "ml", EA: "개" };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -46,7 +49,7 @@ async function loadProducts() {
         const products = await response.json();
 
         // 각 완제품의 원가 정보도 같이 불러옴 (목록에서 바로 원가/원가율/최소판매가 확인하려고)
-        const withCost = await Promise.all(products.map(async (p) => {
+        allProductsWithCost = await Promise.all(products.map(async (p) => {
             try {
                 const costRes = await fetch(`${API_BASE}/${p.id}/cost`);
                 const cost = costRes.ok ? await costRes.json() : null;
@@ -56,10 +59,52 @@ async function loadProducts() {
             }
         }));
 
-        renderTable(withCost);
+        populateCategoryFilterOptions();
+        applyProductFilters();
     } catch (err) {
         showToast(err.message, true);
     }
+}
+
+// 등록된 완제품들의 카테고리를 뽑아서 드롭다운 옵션으로 채움 (중복 제거) - Material의 구매처 드롭다운과 같은 방식
+function populateCategoryFilterOptions() {
+    const previousValue = categoryFilter.value;
+    const categories = [...new Set(allProductsWithCost.map((p) => p.category).filter(Boolean))].sort();
+
+    categoryFilter.innerHTML = '<option value="">카테고리 전체</option>';
+    for (const category of categories) {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = category;
+        categoryFilter.appendChild(option);
+    }
+    categoryFilter.value = previousValue;
+}
+
+function applyProductFilters() {
+    const keyword = productSearchInput.value.trim().toLowerCase();
+    const category = categoryFilter.value;
+
+    const filtered = allProductsWithCost.filter((p) => {
+        const matchesKeyword = !keyword || p.name.toLowerCase().includes(keyword);
+        const matchesCategory = !category || p.category === category;
+        return matchesKeyword && matchesCategory;
+    });
+
+    renderTable(filtered);
+    document.getElementById("product-result-count").textContent =
+        `${filtered.length}건 표시 중 (전체 ${allProductsWithCost.length}건)`;
+}
+
+productSearchInput.addEventListener("input", debounce(applyProductFilters, 200));
+categoryFilter.addEventListener("change", applyProductFilters);
+
+function debounce(fn, delay) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), delay);
+    };
 }
 
 function renderTable(products) {
@@ -86,8 +131,10 @@ function renderTable(products) {
             <td>${ratioText}</td>
             <td>${minPriceText}</td>
             <td>${p.currentStock}개</td>
+            <td>${p.reservedStock ?? 0}개</td>
             <td class="actions-cell">
                 <button class="btn-ghost btn-sm" onclick="openProductionDialog(${p.id}, '${escapeHtml(p.name)}')">생산 등록</button>
+                <button class="btn-ghost btn-sm" onclick="openReserveDialog(${p.id}, '${escapeHtml(p.name)}')">마감 보류</button>
                 <button class="btn-ghost btn-sm" onclick="openDetailDialog(${p.id})">상세보기</button>
                 <button class="btn-ghost btn-sm" onclick="startEdit(${p.id})">수정</button>
                 <button class="btn-danger-text" onclick="deleteProduct(${p.id})">삭제</button>
@@ -225,6 +272,27 @@ async function openDetailDialog(productId) {
         }
 
         await refreshCostSummary(productId);
+
+        // 전환 레시피 - 원본 완제품 드롭다운 채우고, 이미 등록된 게 있으면 자동으로 보여줌
+        await loadProductListForSelects();
+        populateConversionSourceSelect(currentProduct.id);
+
+        const existingConversions = await fetch(`${API_BASE}/${productId}/conversion-recipes`)
+            .then((res) => res.ok ? res.json() : []);
+
+        document.getElementById("conversion-rows").innerHTML = "";
+        if (existingConversions.length > 0) {
+            // 이미 등록된 원본이 여러 개일 수도 있으니, 일단 첫 번째 원본만 자동으로 보여줌
+            const sourceId = existingConversions[0].sourceProductId;
+            document.getElementById("conversion-source-select").value = sourceId;
+            const itemsForSource = existingConversions.filter((item) => item.sourceProductId === sourceId);
+            for (const item of itemsForSource) {
+                addConversionRow(item.materialId, item.materialName, item.perUnitQuantity);
+            }
+        } else {
+            document.getElementById("conversion-source-select").value = "";
+        }
+
         recipeDialog.showModal();
     } catch (err) {
         showToast(err.message, true);
@@ -285,7 +353,7 @@ document.getElementById("save-recipe-btn").addEventListener("click", async () =>
 
     try {
         // 1. 완제품 재무 정보(판매가, 나오는 개수, 기타경비율, 목표원가율) 저장
-        //    name/category/ 이 모달에서 안 건드리니 기존 값을 그대로 유지
+        //    name/category 이 모달에서 안 건드리니 기존 값을 그대로 유지
         const productPayload = {
             name: currentProduct.name,
             category: currentProduct.category,
@@ -338,6 +406,158 @@ async function refreshCostSummary(productId) {
     marginEl.className = cost.margin >= 0 ? "cost-positive" : "cost-negative";
 }
 
+// ===================== 마감 보류 / 보류 폐기 모달 =====================
+const reserveDialog = document.getElementById("reserve-dialog");
+const reserveForm = document.getElementById("reserve-form");
+const reserveProductId = document.getElementById("reserve-product-id");
+let selectedReserveAction = "reserve";
+
+function openReserveDialog(productId, productName) {
+    reserveProductId.value = productId;
+    reserveForm.reset();
+    selectedReserveAction = "reserve";
+    updateReserveTypeToggleUI();
+    document.getElementById("reserve-dialog-title").textContent = `${productName} - 마감 보류`;
+    reserveDialog.showModal();
+}
+
+document.getElementById("reserve-dialog-close-btn").addEventListener("click", () => reserveDialog.close());
+
+document.querySelectorAll(".reserve-type-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        selectedReserveAction = btn.dataset.action;
+        updateReserveTypeToggleUI();
+    });
+});
+
+function updateReserveTypeToggleUI() {
+    document.querySelectorAll(".reserve-type-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.action === selectedReserveAction);
+    });
+}
+
+reserveForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const quantity = Number(document.getElementById("reserve-quantity").value);
+    const endpoint = selectedReserveAction === "reserve" ? "reserve-stock" : "waste-reserved-stock";
+
+    try {
+        const response = await fetch(`${API_BASE}/${reserveProductId.value}/${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ quantity }),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message);
+        }
+        showToast(selectedReserveAction === "reserve" ? "보류 처리됐어요." : "보류 재고가 폐기됐어요.");
+        reserveDialog.close();
+        loadProducts();
+    } catch (err) {
+        showToast(err.message, true);
+    }
+});
+
+// ===================== 전환 레시피 (완제품 상세 모달 내) =====================
+let allProductsCache = []; // 원본 완제품 선택 드롭다운용
+
+async function loadProductListForSelects() {
+    try {
+        const response = await fetch(API_BASE);
+        if (response.ok) allProductsCache = await response.json();
+    } catch (err) {
+        // 조용히 실패 - 드롭다운만 비어있게 됨
+    }
+}
+
+function populateConversionSourceSelect(excludeProductId) {
+    const select = document.getElementById("conversion-source-select");
+    select.innerHTML = '<option value="">선택</option>' + allProductsCache
+        .filter((p) => p.id !== excludeProductId)
+        .map((p) => `<option value="${p.id}">${escapeHtml(p.name)} (보류 ${p.reservedStock ?? 0}개)</option>`)
+        .join("");
+}
+
+let conversionRowIdCounter = 0;
+
+function addConversionRow(materialId = "", materialName = "", perUnitQuantity = "") {
+    const rowId = `conversion-row-${conversionRowIdCounter++}`;
+    const row = document.createElement("div");
+    row.className = "recipe-row";
+    row.id = rowId;
+    row.innerHTML = `
+        <input type="text" list="materials-datalist" class="conversion-material-input"
+               value="${escapeHtml(materialName)}" placeholder="재료명 검색">
+        <input type="hidden" class="conversion-material-id" value="${materialId}">
+        <input type="number" step="0.001" class="conversion-quantity-input" placeholder="완제품 1개당 필요량" value="${perUnitQuantity}">
+        <button type="button" class="btn-danger-text" style="width:40px;" onclick="document.getElementById('${rowId}').remove()">삭제</button>
+    `;
+    document.getElementById("conversion-rows").appendChild(row);
+
+    const nameInput = row.querySelector(".conversion-material-input");
+    const idInputEl = row.querySelector(".conversion-material-id");
+    nameInput.addEventListener("input", () => {
+        const matched = findMaterialByName(nameInput.value);
+        idInputEl.value = matched ? matched.id : "";
+    });
+}
+
+document.getElementById("add-conversion-row-btn").addEventListener("click", () => addConversionRow());
+
+document.getElementById("conversion-source-select").addEventListener("change", async () => {
+    const sourceId = document.getElementById("conversion-source-select").value;
+    const conversionRows = document.getElementById("conversion-rows");
+    conversionRows.innerHTML = "";
+    if (!sourceId || !currentProduct) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/${sourceId}/conversion-recipe/${currentProduct.id}`);
+        if (!response.ok) throw new Error("전환 레시피를 불러오지 못했습니다.");
+        const items = await response.json();
+        if (items.length === 0) {
+            addConversionRow();
+        } else {
+            for (const item of items) addConversionRow(item.materialId, item.materialName, item.perUnitQuantity);
+        }
+    } catch (err) {
+        showToast(err.message, true);
+    }
+});
+
+document.getElementById("save-conversion-btn").addEventListener("click", async () => {
+    const sourceId = document.getElementById("conversion-source-select").value;
+    if (!sourceId) {
+        showToast("원본 완제품을 선택해주세요.", true);
+        return;
+    }
+
+    const rows = document.querySelectorAll("#conversion-rows .recipe-row");
+    const items = [];
+    for (const row of rows) {
+        const materialId = row.querySelector(".conversion-material-id").value;
+        const perUnitQuantity = row.querySelector(".conversion-quantity-input").value;
+        if (!materialId || !perUnitQuantity) continue;
+        items.push({ materialId: Number(materialId), perUnitQuantity: Number(perUnitQuantity) });
+    }
+    if (items.length === 0) {
+        showToast("재료를 하나 이상 입력해주세요.", true);
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/${sourceId}/conversion-recipe/${currentProduct.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+        });
+        if (!response.ok) throw new Error((await response.json()).message);
+        showToast("전환 레시피가 저장됐어요.");
+    } catch (err) {
+        showToast(err.message, true);
+    }
+});
+
 // ===================== 생산 등록 & 이력 모달 =====================
 const PRODUCTION_API = "/api/productions";
 const productionDialog = document.getElementById("production-dialog");
@@ -356,11 +576,41 @@ async function openProductionDialog(productId, productName) {
     productionDateInput.value = todayString();
     document.getElementById("production-dialog-title").textContent = `${productName} - 생산 등록`;
 
+    selectedProductionType = "NORMAL";
+    updateProductionTypeToggleUI();
+    await loadProductListForSelects();
+    populateProductionSourceSelect(productId);
+
     await loadProductionHistory(productId);
     productionDialog.showModal();
 }
 
 document.getElementById("production-dialog-close-btn").addEventListener("click", () => productionDialog.close());
+
+let selectedProductionType = "NORMAL";
+
+document.querySelectorAll(".production-type-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        selectedProductionType = btn.dataset.type;
+        updateProductionTypeToggleUI();
+    });
+});
+
+function updateProductionTypeToggleUI() {
+    document.querySelectorAll(".production-type-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.type === selectedProductionType);
+    });
+    document.getElementById("production-source-field").style.display =
+        selectedProductionType === "CONVERSION" ? "block" : "none";
+}
+
+function populateProductionSourceSelect(excludeProductId) {
+    const select = document.getElementById("production-source-select");
+    select.innerHTML = '<option value="">선택</option>' + allProductsCache
+        .filter((p) => p.id !== excludeProductId)
+        .map((p) => `<option value="${p.id}">${escapeHtml(p.name)} (보류 ${p.reservedStock ?? 0}개)</option>`)
+        .join("");
+}
 
 async function loadProductionHistory(productId) {
     const container = document.getElementById("production-history-list");
@@ -392,10 +642,19 @@ async function loadProductionHistory(productId) {
 productionForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    if (selectedProductionType === "CONVERSION" && !document.getElementById("production-source-select").value) {
+        showToast("전환 생산은 원본 완제품을 선택해주세요.", true);
+        return;
+    }
+
     const payload = {
         productId: Number(productionProductId.value),
         producedQuantity: Number(document.getElementById("production-quantity").value),
         productionDate: productionDateInput.value,
+        productionType: selectedProductionType,
+        sourceProductId: selectedProductionType === "CONVERSION"
+            ? Number(document.getElementById("production-source-select").value)
+            : null,
         note: document.getElementById("production-note").value || null,
     };
 
@@ -434,14 +693,4 @@ async function cancelProduction(logId, productId) {
     } catch (err) {
         showToast(err.message, true);
     }
-}
-
-// ===================== 토스트 =====================
-let toastTimer;
-function showToast(message, isError = false) {
-    clearTimeout(toastTimer);
-    toast.textContent = message;
-    toast.classList.toggle("error", isError);
-    toast.classList.add("show");
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2500);
 }

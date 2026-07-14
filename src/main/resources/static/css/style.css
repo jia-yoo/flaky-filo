@@ -481,6 +481,25 @@ dialog h3 {
     font-size: 16px;
 }
 
+/* 완제품 상세 모달 안에서 섹션(레시피 / 전환레시피)을 시각적으로 구분해주는 박스 */
+.dialog-section {
+    background: var(--bg);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin: 18px 0;
+}
+
+.dialog-section h3 {
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.dialog-section p.hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0 0 12px;
+}
+
 .type-toggle {
     display: flex;
     gap: 8px;

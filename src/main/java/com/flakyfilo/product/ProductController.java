@@ -62,6 +62,42 @@ public class ProductController {
         return productService.getRecipe(id).stream().map(RecipeItemResponse::from).toList();
     }
 
+    @GetMapping("/{targetId}/conversion-recipes")
+    public List<ConversionRecipeItemResponse> getConversionRecipesByTarget(@PathVariable Long targetId) {
+        return productService.getConversionRecipesByTarget(targetId).stream()
+                .map(ConversionRecipeItemResponse::from).toList();
+    }
+
+    @GetMapping("/{sourceId}/conversion-recipe/{targetId}")
+    public List<ConversionRecipeItemResponse> getConversionRecipe(@PathVariable Long sourceId, @PathVariable Long targetId) {
+        return productService.getConversionRecipe(sourceId, targetId).stream()
+                .map(ConversionRecipeItemResponse::from).toList();
+    }
+
+    @PutMapping("/{sourceId}/conversion-recipe/{targetId}")
+    public List<ConversionRecipeItemResponse> updateConversionRecipe(
+            @PathVariable Long sourceId, @PathVariable Long targetId,
+            @Valid @RequestBody ConversionRecipeUpdateRequest request) {
+        List<ProductService.RecipeItem> items = request.items().stream()
+                .map(item -> new ProductService.RecipeItem(item.materialId(), item.perUnitQuantity()))
+                .toList();
+        productService.setConversionRecipe(sourceId, targetId, items);
+        return productService.getConversionRecipe(sourceId, targetId).stream()
+                .map(ConversionRecipeItemResponse::from).toList();
+    }
+
+    @PostMapping("/{id}/reserve-stock")
+    public ResponseEntity<Void> reserveStock(@PathVariable Long id, @Valid @RequestBody ReserveStockRequest request) {
+        productService.reserveStock(id, request.quantity());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/waste-reserved-stock")
+    public ResponseEntity<Void> wasteReservedStock(@PathVariable Long id, @Valid @RequestBody ReserveStockRequest request) {
+        productService.wasteReservedStock(id, request.quantity());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/cost")
     public CostResponse getCost(@PathVariable Long id) {
         return CostResponse.from(productService.calculateCost(id));

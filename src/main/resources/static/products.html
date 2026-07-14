@@ -5,7 +5,8 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>완제품 관리 - Flaky Filo</title>
     <link href="https://fonts.googleapis.com" rel="preconnect">
-    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Alfa+Slab+One&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Alfa+Slab+One&family=Inter:wght@400;500;600&display=swap"
+          rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
@@ -19,7 +20,6 @@
         <p>완제품을 등록하고, 레시피(BOM)를 넣어보면서 원가를 확인하세요.</p>
     </div>
 
-    <!-- 등록/수정 폼 -->
     <section class="card" id="product-form-card" style="margin-bottom: 24px;">
         <h3 id="form-title" style="margin-bottom: 16px;">완제품 등록</h3>
         <form id="product-form">
@@ -57,9 +57,16 @@
         </form>
     </section>
 
-    <!-- 목록 -->
     <section class="card">
-        <h3 style="margin-bottom:16px;">완제품 목록</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <h3>완제품 목록</h3>
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <input id="product-search-input" placeholder="이름으로 검색" style="width:180px;" type="text">
+                <select id="category-filter" style="width:150px;">
+                    <option value="">카테고리 전체</option>
+                </select>
+            </div>
+        </div>
         <table>
             <thead>
             <tr>
@@ -70,11 +77,14 @@
                 <th>원가율</th>
                 <th>최소판매가</th>
                 <th>재고</th>
+                <th>보류재고</th>
                 <th></th>
             </tr>
             </thead>
             <tbody id="product-table-body"></tbody>
         </table>
+
+        <p id="product-result-count" style="font-size:12px; color:var(--text-secondary); margin-top:12px;"></p>
 
         <div class="empty-state" id="empty-state" style="display:none;">
             등록된 완제품이 없어요. 위 폼에서 첫 완제품을 등록해보세요.
@@ -82,7 +92,6 @@
     </section>
 </main>
 
-<!-- 완제품 상세 (레시피 + 원가) 모달 -->
 <dialog id="recipe-dialog" style="width: 640px;">
     <h3 id="recipe-dialog-title" style="margin-bottom: 16px;">완제품 상세</h3>
 
@@ -105,9 +114,7 @@
         </div>
     </div>
 
-    <datalist id="materials-datalist">
-        <!-- JS가 등록된 원재료 이름으로 옵션을 채워넣음 (검색 가능한 자동완성용) -->
-    </datalist>
+    <datalist id="materials-datalist"></datalist>
 
     <div style="margin: 16px 0 8px; font-size:13px; color:var(--text-secondary); display:flex; gap:8px;">
         <span style="flex:2;">재료</span>
@@ -119,7 +126,6 @@
     <div id="recipe-rows"></div>
     <button class="btn-ghost btn-sm" id="add-recipe-row-btn" style="margin: 8px 0 18px;" type="button">+ 재료 추가</button>
 
-    <!-- 원가 계산 결과 - 입력하는 즉시 실시간으로 갱신됨 (저장 전에도 바로 보임) -->
     <div class="cost-summary" id="cost-summary">
         <div class="cost-row"><span>원가 (개당)</span><span id="cost-raw"></span></div>
         <div class="cost-row"><span>기타경비</span><span id="cost-overhead"></span></div>
@@ -133,15 +139,61 @@
         <button class="btn-primary" id="save-recipe-btn" type="button">저장</button>
         <button class="btn-ghost" id="recipe-dialog-close-btn" type="button">닫기</button>
     </div>
+
+    <div class="dialog-section">
+        <h3>전환 레시피 (보류 재고 활용)</h3>
+        <p class="hint">예: 크로와상 보류분으로 이 완제품(아몬드크로와상 등)을 만들 때 추가로 드는 재료만 등록하세요.</p>
+        <div style="margin-bottom:10px;">
+            <label for="conversion-source-select">원본 완제품 (보류 재고를 제공하는 쪽)</label>
+            <select id="conversion-source-select">
+                <option value="">선택</option>
+            </select>
+        </div>
+        <div id="conversion-rows"></div>
+        <button class="btn-ghost btn-sm" id="add-conversion-row-btn" style="margin: 8px 0 14px;" type="button">+ 재료 추가</button>
+        <div class="form-actions">
+            <button class="btn-primary btn-sm" id="save-conversion-btn" type="button">전환 레시피 저장</button>
+        </div>
+    </div>
 </dialog>
 
+<dialog id="reserve-dialog" style="width: 400px;">
+    <h3 id="reserve-dialog-title" style="margin-bottom: 16px;">마감 보류</h3>
+    <form id="reserve-form">
+        <input id="reserve-product-id" type="hidden">
+        <div class="type-toggle">
+            <button class="reserve-type-btn active" data-action="reserve" type="button">보류 (판매 재고에서 빼기)</button>
+            <button class="reserve-type-btn" data-action="waste" type="button">보류 폐기 (완전히 버림)</button>
+        </div>
+        <div style="margin-bottom: 18px;">
+            <label for="reserve-quantity">수량 (개)</label>
+            <input id="reserve-quantity" min="1" required type="number">
+        </div>
+        <div class="form-actions">
+            <button class="btn-primary" type="submit">처리</button>
+            <button class="btn-ghost" id="reserve-dialog-close-btn" type="button">닫기</button>
+        </div>
+    </form>
+</dialog>
 
-<!-- 생산 등록 & 이력 모달 -->
 <dialog id="production-dialog" style="width: 480px;">
     <h3 id="production-dialog-title" style="margin-bottom: 16px;">생산 등록</h3>
 
     <form id="production-form" style="margin-bottom: 20px;">
         <input id="production-product-id" type="hidden">
+
+        <div class="type-toggle">
+            <button class="production-type-btn active" data-type="NORMAL" type="button">일반 생산</button>
+            <button class="production-type-btn" data-type="CONVERSION" type="button">전환 생산 (보류 재고 활용)</button>
+        </div>
+
+        <div id="production-source-field" style="display:none; margin-bottom: 14px;">
+            <label for="production-source-select">원본 완제품 (보류 재고 사용)</label>
+            <select id="production-source-select">
+                <option value="">선택</option>
+            </select>
+        </div>
+
         <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
             <div>
                 <label for="production-date">생산일</label>
@@ -156,7 +208,7 @@
             <label for="production-note">메모</label>
             <input id="production-note" placeholder="예: 오전 베이킹" type="text">
         </div>
-        <button class="btn-primary" type="submit">등록 (레시피 기준 원재료 자동 차감)</button>
+        <button class="btn-primary" type="submit">등록 (원재료/보류재고 자동 차감)</button>
     </form>
 
     <h3 style="font-size:14px; margin-bottom:10px;">최근 생산 이력</h3>
