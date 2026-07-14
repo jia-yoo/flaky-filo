@@ -15,6 +15,7 @@ const TOPBAR_HTML = `
         <a href="index.html" class="${CURRENT_PATH === "index.html" ? "active" : ""}">대시보드</a>
         <a href="materials.html" class="${CURRENT_PATH.startsWith("material") ? "active" : ""}">원재료</a>
         <a href="products.html" class="${CURRENT_PATH === "products.html" ? "active" : ""}">완제품</a>
+        <a href="daily-operations.html" class="${CURRENT_PATH === "daily-operations.html" ? "active" : ""}">일일 운영</a>
     </nav>
 </header>
 `;

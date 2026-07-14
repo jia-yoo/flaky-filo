@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>일일 운영 - Flaky Filo</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Alfa+Slab+One&family=Inter:wght@400;500;600&display=swap"
+          rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="topbar-placeholder"></div>
+<script src="js/common.js"></script>
+
+<main class="page">
+    <div class="page-header">
+        <h1>일일 운영</h1>
+        <p>오늘 생산량을 한 번에 입력하고, 마감할 때 폐기·이월·보류를 한 번에 처리하세요.</p>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <label for="op-date" style="display:inline-block; margin-right:8px;">날짜</label>
+        <input id="op-date" type="date">
+    </div>
+
+    <!-- 오늘 생산 등록 -->
+    <section class="card" style="margin-bottom: 24px;">
+        <h3 style="margin-bottom:6px;">오늘 생산 등록</h3>
+        <p style="font-size:13px; color:var(--text-secondary); margin:0 0 16px;">
+            판매중인 메뉴만 나열돼요. 오늘 이미 등록한 생산량은 자동으로 채워져서 보이고, 숫자만 고쳐서 다시 저장하면 수정돼요.
+            전환 생산(보류 재고 활용)은 실제로 레시피가 등록된 완제품만 "+ 전환분 추가"로 나와요.
+        </p>
+        <div id="production-rows-daily"></div>
+        <div class="form-actions" style="margin-top:16px;">
+            <button class="btn-primary" id="save-daily-production-btn" type="button">생산 일괄 저장</button>
+        </div>
+    </section>
+
+    <!-- 마감 처리 -->
+    <section class="card">
+        <h3 style="margin-bottom:6px;">마감 처리</h3>
+        <p style="font-size:13px; color:var(--text-secondary); margin:0 0 16px;">
+            "당일폐기" 메뉴는 남은 재고 전량이 폐기로 미리 채워져요. 필요하면 수량을 나눠서 일부는 폐기, 일부는 보류로도 처리할 수 있어요 - "+ 처리 추가"로 줄을 늘리세요. 처리하지 않은 나머지는 자동으로 이월돼요.
+        </p>
+        <div id="closing-rows-daily"></div>
+        <div class="form-actions" style="margin-top:16px;">
+            <button class="btn-primary" id="save-daily-closing-btn" type="button">마감 일괄 처리</button>
+        </div>
+    </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/daily-operations.js"></script>
+</body>
+</html>
