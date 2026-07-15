@@ -25,6 +25,11 @@
         <input id="op-date" type="date">
     </div>
 
+    <div id="closed-banner" style="background:var(--danger-bg); color:var(--danger); padding:12px 16px; border-radius:var(--radius); margin-bottom:20px; font-size:13px; align-items:center; justify-content:space-between; gap:12px;">
+        <span>이 날짜는 이미 마감 처리됐어요. 생산 등록/취소가 제한돼요.</span>
+        <button class="btn-ghost btn-sm" id="reopen-day-btn" style="border-color:var(--danger); color:var(--danger); flex:0 0 auto;" type="button">마감 취소</button>
+    </div>
+
     <!-- 오늘 생산 등록 -->
     <section class="card" style="margin-bottom: 24px;">
         <h3 style="margin-bottom:6px;">오늘 생산 등록</h3>

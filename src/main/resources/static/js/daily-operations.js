@@ -13,13 +13,61 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 document.getElementById("op-date").addEventListener("change", refreshAll);
 
+let isDateClosed = false; // 선택된 날짜가 이미 마감 처리됐는지
+
 async function refreshAll() {
     await loadActiveProducts();
     await loadValidConversionSources();
     await loadTodayProductionLogs();
+    await loadClosingStatus();
     renderProductionRows();
     renderClosingRows();
+    applyClosingLockUI();
 }
+
+async function loadClosingStatus() {
+    const selectedDate = document.getElementById("op-date").value;
+    try {
+        const response = await fetch(`/api/daily-closings/${selectedDate}`);
+        const data = response.ok ? await response.json() : { closed: false };
+        isDateClosed = data.closed;
+    } catch {
+        isDateClosed = false;
+    }
+}
+
+// 마감된 날짜면 생산 등록 관련 입력/버튼을 다 비활성화하고 안내 배너를 보여줌
+function applyClosingLockUI() {
+    document.getElementById("closed-banner").style.display = isDateClosed ? "flex" : "none";
+
+    const productionSection = document.getElementById("production-rows-daily");
+    productionSection.querySelectorAll("input, select, button").forEach((el) => {
+        el.disabled = isDateClosed;
+    });
+    document.getElementById("save-daily-production-btn").disabled = isDateClosed;
+
+    // 마감 버튼도 이미 마감된 날짜면 다시 못 누르게
+    const closingBtn = document.getElementById("save-daily-closing-btn");
+    closingBtn.disabled = isDateClosed;
+    closingBtn.textContent = isDateClosed ? "이미 마감 처리됨" : "마감 일괄 처리";
+}
+
+document.getElementById("reopen-day-btn").addEventListener("click", async () => {
+    const selectedDate = document.getElementById("op-date").value;
+    if (!confirm(`${selectedDate} 마감을 취소할까요? 그 날짜로 다시 생산 등록/수정이 가능해져요.`)) return;
+
+    try {
+        const response = await fetch(`/api/daily-closings/${selectedDate}`, { method: "DELETE" });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message);
+        }
+        showToast("마감이 취소됐어요.");
+        await refreshAll();
+    } catch (err) {
+        showToast(err.message, true);
+    }
+});
 
 function todayString() {
     const now = new Date();
@@ -152,7 +200,13 @@ function renderProductionRows() {
 function addConversionSubRow(subRowContainer, targetProductId, existingSourceId = "", existingSourceName = "",
                               existingQty = "", existingLogId = "") {
     const rowId = `conv-sub-${conversionRowCounter++}`;
-    const sources = validSourcesByTarget[targetProductId] ?? [];
+    const sources = [...(validSourcesByTarget[targetProductId] ?? [])];
+
+    // 이미 등록된 원본이 "현재 유효한 원본 목록"에 없으면(레시피가 삭제됐거나, 예전에 잘못 등록된 경우)
+    // 그래도 지금 뭐가 선택돼 있었는지 알아볼 수 있게 옵션으로 끼워넣는다 (안 그러면 빈 드롭다운으로 보여서 헷갈림)
+    if (existingSourceId && !sources.some((s) => String(s.sourceProductId) === String(existingSourceId))) {
+        sources.unshift({ sourceProductId: existingSourceId, sourceProductName: (existingSourceName || "알 수 없음(레시피 확인 필요)") });
+    }
 
     const div = document.createElement("div");
     div.id = rowId;
@@ -165,9 +219,30 @@ function addConversionSubRow(subRowContainer, targetProductId, existingSourceId 
         </select>
         <span style="color:var(--text-secondary); flex:0 0 auto;">)</span>
         <input type="number" min="0" class="daily-conversion-qty" placeholder="수량" style="width:90px;" value="${existingQty}">
-        <button type="button" class="btn-danger-text" onclick="document.getElementById('${rowId}').remove()">삭제</button>
+        <button type="button" class="btn-danger-text remove-conversion-row">삭제</button>
     `;
     subRowContainer.appendChild(div);
+
+    // 삭제 버튼: 이미 저장된 기록(existingLogId 있음)이면 서버에도 실제로 취소 요청을 보내야 함 -
+    // 화면에서만 지우면 새로고침했을 때 다시 나타남
+    div.querySelector(".remove-conversion-row").addEventListener("click", async () => {
+        if (existingLogId) {
+            if (!confirm("이미 저장된 전환 생산 기록이에요. 취소할까요? (재고가 원상복구돼요)")) return;
+            try {
+                const response = await fetch(`${PRODUCTION_API}/${existingLogId}/cancel`, { method: "POST" });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message);
+                }
+                showToast("전환 생산 기록이 취소됐어요.");
+                await refreshAll();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        } else {
+            div.remove(); // 아직 저장 안 한(새로 추가만 한) 줄은 그냥 화면에서 지우면 됨
+        }
+    });
 }
 
 document.getElementById("save-daily-production-btn").addEventListener("click", async () => {
@@ -320,6 +395,10 @@ function addClosingActionRow(container, action = "waste", quantity = "") {
 }
 
 document.getElementById("save-daily-closing-btn").addEventListener("click", async () => {
+    if (!confirm("마감 처리하면 오늘(선택한 날짜)의 생산 등록/수정이 더 이상 안 돼요. 계속할까요?")) {
+        return;
+    }
+
     const rows = document.querySelectorAll("#closing-rows-daily .daily-row");
     const actions = [];
 
@@ -352,25 +431,36 @@ document.getElementById("save-daily-closing-btn").addEventListener("click", asyn
         }
     }
 
-    if (actions.length === 0) {
-        showToast("처리할 마감 항목이 없어요 (전부 이월).");
-        return;
-    }
+    // actions가 비어있어도(전부 이월) 마감 자체는 진행한다 - 아래에서 폐기/보류 처리 후 날짜를 마감 처리함
 
     try {
+        const selectedDateForActions = document.getElementById("op-date").value;
         for (const item of actions) {
             const endpoint = item.action === "waste" ? "dispose-stock" : "reserve-stock";
             const response = await fetch(`${API_BASE}/${item.productId}/${endpoint}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ quantity: item.quantity }),
+                body: JSON.stringify({ quantity: item.quantity, closingDate: selectedDateForActions }),
             });
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(`${item.productId}번 완제품 마감 처리 실패: ${error.message}`);
             }
         }
-        showToast(`마감 처리 ${actions.length}건이 완료됐어요.`);
+
+        // 폐기/보류 처리가 끝나면 마지막으로 이 날짜를 "마감됨"으로 표시 - 이후 생산 등록/취소가 잠김
+        const selectedDate = document.getElementById("op-date").value;
+        const closeResponse = await fetch("/api/daily-closings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: selectedDate }),
+        });
+        if (!closeResponse.ok) {
+            const error = await closeResponse.json();
+            throw new Error(`마감 확정 실패: ${error.message}`);
+        }
+
+        showToast(actions.length > 0 ? `마감 처리 ${actions.length}건이 완료되고, 이 날짜가 마감됐어요.` : "이 날짜가 마감됐어요.");
         await refreshAll();
     } catch (err) {
         showToast(err.message, true);

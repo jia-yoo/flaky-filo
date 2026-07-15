@@ -1,5 +1,6 @@
 package com.flakyfilo.production;
 
+import com.flakyfilo.closing.DailyClosingService;
 import com.flakyfilo.common.EntityFinder;
 import com.flakyfilo.common.enums.ProductionType;
 import com.flakyfilo.common.enums.StockReasonCode;
@@ -22,12 +23,14 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ProductionService {
 
+    private static final Long DEFAULT_STORE_ID = 1L; // MVP 단계 고정값 (다른 도메인과 동일한 관례)
     private final ProductRepository productRepository;
     private final ProductRecipeRepository recipeRepository;
     private final ProductConversionRecipeRepository conversionRecipeRepository;
     private final ProductionLogRepository productionLogRepository;
     private final ProductionMaterialUsageRepository usageRepository;
     private final MaterialStockTransactionRepository materialTransactionRepository;
+    private final DailyClosingService closingService;
 
     /**
      * 생산 등록.
@@ -37,6 +40,9 @@ public class ProductionService {
     @Transactional
     public ProductionLog register(Long productId, int producedQuantity, LocalDate productionDate,
                                   ProductionType productionType, Long sourceProductId, String note) {
+        LocalDate effectiveDate = productionDate != null ? productionDate : LocalDate.now();
+        closingService.assertNotClosed(DEFAULT_STORE_ID, effectiveDate); // 마감된 날짜면 여기서 예외
+
         Product product = EntityFinder.findOrThrow(productRepository, productId, "완제품");
         Product sourceProduct = sourceProductId != null
                 ? EntityFinder.findOrThrow(productRepository, sourceProductId, "원본 완제품")
@@ -91,6 +97,9 @@ public class ProductionService {
     public void cancel(Long productionLogId) {
         ProductionLog log = productionLogRepository.findByIdWithProducts(productionLogId)
                 .orElseThrow(() -> new BusinessException("존재하지 않는 생산 기록입니다. id=" + productionLogId));
+
+        closingService.assertNotClosed(DEFAULT_STORE_ID, log.getProductionDate()); // 마감된 날짜의 기록은 취소도 불가
+
         log.cancel();
 
         Product product = log.getProduct();

@@ -54,7 +54,7 @@ public class ProductController {
     // 마감 즉시 폐기 (기존 ReserveStockRequest 재사용 - quantity 하나만 있으면 됨)
     @PostMapping("/{id}/dispose-stock")
     public ResponseEntity<Void> disposeStock(@PathVariable Long id, @Valid @RequestBody ReserveStockRequest request) {
-        productService.disposeStock(id, request.quantity());
+        productService.disposeStock(id, request.quantity(), request.closingDate());
         return ResponseEntity.noContent().build();
     }
 
@@ -104,7 +104,7 @@ public class ProductController {
 
     @PostMapping("/{id}/reserve-stock")
     public ResponseEntity<Void> reserveStock(@PathVariable Long id, @Valid @RequestBody ReserveStockRequest request) {
-        productService.reserveStock(id, request.quantity());
+        productService.reserveStock(id, request.quantity(), request.closingDate());
         return ResponseEntity.noContent().build();
     }
 
