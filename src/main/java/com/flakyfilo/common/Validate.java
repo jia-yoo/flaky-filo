@@ -3,6 +3,7 @@ package com.flakyfilo.common;
 import com.flakyfilo.common.exception.BusinessException;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 
 /**
  * 여러 Entity에서 반복되는 기본 검증 로직을 모아둔 공통 유틸리티.
@@ -19,6 +20,12 @@ public class Validate {
     public static void notBlank(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new BusinessException(fieldName + "은(는) 비어있을 수 없습니다.");
+        }
+    }
+
+    public static void notEmpty(Collection<?> collection, String fieldName) {
+        if (collection == null || collection.isEmpty()) {
+            throw new BusinessException(fieldName + "이(가) 비어 있습니다.");
         }
     }
 
