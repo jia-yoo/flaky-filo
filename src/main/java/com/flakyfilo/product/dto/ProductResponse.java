@@ -18,6 +18,7 @@ public record ProductResponse(
         BigDecimal targetCostRatio,
         boolean active,
         boolean autoDisposeIfUnsold,
+        boolean instantProduction,
         LocalDateTime createdAt
 ) {
     public static ProductResponse from(Product product) {
@@ -34,6 +35,7 @@ public record ProductResponse(
                 product.getTargetCostRatio(),
                 product.isActive(),
                 product.isAutoDisposeIfUnsold(),
+                product.isInstantProduction(),
                 product.getCreatedAt()
         );
     }

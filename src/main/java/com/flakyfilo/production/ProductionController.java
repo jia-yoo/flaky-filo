@@ -31,6 +31,14 @@ public class ProductionController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/instant")
+    public ResponseEntity<ProductionLogResponse> registerInstant(@Valid @RequestBody ProductionRegisterRequest request) {
+        ProductionLog log = productionService.registerInstant(
+                request.productId(), request.producedQuantity(), request.productionDate(),
+                request.productionType(), request.sourceProductId(), request.note());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ProductionLogResponse.from(log));
+    }
+
     @GetMapping
     public List<ProductionLogResponse> getHistory(@RequestParam Long productId) {
         return productionService.getHistory(productId).stream().map(ProductionLogResponse::from).toList();

@@ -134,6 +134,7 @@ function renderTable(products) {
                 <div class="status-badges">
                     ${p.active ? '<span class="badge badge-success">판매중</span>' : '<span class="badge badge-danger">중단</span>'}
                     ${p.autoDisposeIfUnsold ? '<span class="badge badge-gold">당일폐기</span>' : '<span class="badge badge-info">이월</span>'}
+                    ${p.instantProduction ? '<span class="badge badge-instant">즉석생산</span>' : ''}
                 </div>
             </td>
             <td class="actions-cell">
@@ -166,6 +167,7 @@ form.addEventListener("submit", async (e) => {
         targetCostRatio: Number(document.getElementById("targetCostRatio").value || 40) / 100,
         active: document.getElementById("isActive").checked,
         autoDisposeIfUnsold: document.getElementById("autoDisposeIfUnsold").checked,
+        instantProduction: document.getElementById("instantProduction").checked,
     };
 
     const editingId = idInput.value;
@@ -207,6 +209,7 @@ async function startEdit(id) {
         document.getElementById("targetCostRatio").value = (p.targetCostRatio * 100).toFixed(1);
         document.getElementById("isActive").checked = p.active;
         document.getElementById("autoDisposeIfUnsold").checked = p.autoDisposeIfUnsold;
+        document.getElementById("instantProduction").checked = p.instantProduction;
 
         formTitle.textContent = "완제품 수정";
         submitBtn.textContent = "수정 완료";

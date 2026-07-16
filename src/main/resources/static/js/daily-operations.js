@@ -76,7 +76,7 @@ function todayString() {
 
 async function loadActiveProducts() {
     try {
-        const response = await fetch(`${API_BASE}/active`);
+        const response = await fetch(`${API_BASE}/active/scheduled`);
         if (!response.ok) throw new Error("판매중인 완제품 목록을 불러오지 못했습니다.");
         activeProducts = await response.json();
     } catch (err) {

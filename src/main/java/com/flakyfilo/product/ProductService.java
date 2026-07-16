@@ -32,10 +32,10 @@ public class ProductService {
     @Transactional
     public Product register(Long storeId, String name, String category, int price,
                             Integer yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
-                            Boolean active, Boolean autoDisposeIfUnsold) {
+                            Boolean active, Boolean autoDisposeIfUnsold, Boolean instantProduction) {
         return productRepository.save(Product.register(
                 storeId, name, category, price, yieldCount, overheadRate, targetCostRatio,
-                active, autoDisposeIfUnsold));
+                active, autoDisposeIfUnsold, instantProduction));
     }
 
     public Product getById(Long productId) {
@@ -46,18 +46,28 @@ public class ProductService {
         return productRepository.findByStoreId(storeId);
     }
 
-    /** 일일 생산/마감 화면 전용 - 판매중인 것만 */
+    /** 주문 화면 등에서 쓰는 전체 판매중 목록 (즉석메뉴 포함) */
     public List<Product> getActiveProducts(Long storeId) {
         return productRepository.findByStoreIdAndActiveTrue(storeId);
+    }
+
+    /** 일일 생산/마감 화면 전용 - 즉석주문생산 메뉴는 제외 */
+    public List<Product> getScheduledProductionProducts(Long storeId) {
+        return productRepository.findByStoreIdAndActiveTrueAndInstantProductionFalse(storeId);
+    }
+
+    /** 즉석메뉴 빠른 기록 패널 전용 */
+    public List<Product> getInstantProductionProducts(Long storeId) {
+        return productRepository.findByStoreIdAndActiveTrueAndInstantProductionTrue(storeId);
     }
 
     @Transactional
     public void updateInfo(Long productId, String name, String category, int price,
                            int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
-                           boolean active, boolean autoDisposeIfUnsold) {
+                           boolean active, boolean autoDisposeIfUnsold, boolean instantProduction) {
         Product product = findOrThrow(productId);
         product.updateInfo(name, category, price, yieldCount, overheadRate, targetCostRatio,
-                active, autoDisposeIfUnsold);
+                active, autoDisposeIfUnsold, instantProduction);
     }
 
     @Transactional

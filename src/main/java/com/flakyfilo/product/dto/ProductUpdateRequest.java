@@ -15,6 +15,7 @@ public record ProductUpdateRequest(
         @NotNull BigDecimal overheadRate,
         @NotNull BigDecimal targetCostRatio,
         boolean active,
-        boolean autoDisposeIfUnsold
+        boolean autoDisposeIfUnsold,
+        boolean instantProduction
 ) {
 }

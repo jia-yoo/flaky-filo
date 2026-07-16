@@ -1,6 +1,7 @@
 package com.flakyfilo.production;
 
 import com.flakyfilo.common.BaseTimeEntity;
+import com.flakyfilo.common.Validate;
 import com.flakyfilo.common.enums.ProductionType;
 import com.flakyfilo.common.exception.BusinessException;
 import com.flakyfilo.product.Product;
@@ -48,25 +49,44 @@ public class ProductionLog extends BaseTimeEntity {
     @Column(length = 200)
     private String note;
 
+    /**
+     * 즉석메뉴 "빠른 기록"으로 만들어진 건인지. true면 애초에 Product.currentStock을
+     * 늘리지 않았으므로(즉석메뉴는 재고를 안 쌓아둠), cancel()에서 재고를 되돌릴 때
+     * currentStock 복원 단계는 건너뛰어야 한다 - 안 그러면 늘린 적 없는 재고를 깎아버리게 됨.
+     */
+    @Column(name = "instant_record", nullable = false)
+    private boolean instantRecord = false;
+
     @Column(nullable = false)
     private boolean cancelled = false;
 
     @Builder(access = AccessLevel.PRIVATE)
     private ProductionLog(Product product, int producedQuantity, LocalDate productionDate,
-                          ProductionType productionType, Product sourceProduct, String note) {
+                          ProductionType productionType, Product sourceProduct, String note, boolean instantRecord) {
         this.product = product;
         this.producedQuantity = producedQuantity;
         this.productionDate = productionDate;
         this.productionType = productionType;
         this.sourceProduct = sourceProduct;
         this.note = note;
+        this.instantRecord = instantRecord;
     }
 
     public static ProductionLog register(Product product, int producedQuantity, LocalDate productionDate,
                                          ProductionType productionType, Product sourceProduct, String note) {
-        if (producedQuantity <= 0) {
-            throw new BusinessException("생산 수량은 0보다 커야 합니다.");
-        }
+        return registerInternal(product, producedQuantity, productionDate, productionType, sourceProduct, note, false);
+    }
+
+    /** 즉석메뉴 빠른 기록 전용 - Product.currentStock을 안 늘리는 생산 이벤트. */
+    public static ProductionLog registerInstant(Product product, int producedQuantity, LocalDate productionDate,
+                                                ProductionType productionType, Product sourceProduct, String note) {
+        return registerInternal(product, producedQuantity, productionDate, productionType, sourceProduct, note, true);
+    }
+
+    private static ProductionLog registerInternal(Product product, int producedQuantity, LocalDate productionDate,
+                                                  ProductionType productionType, Product sourceProduct, String note,
+                                                  boolean instantRecord) {
+        Validate.notNegative(producedQuantity, "생산 수량");
         if (productionType == ProductionType.CONVERSION && sourceProduct == null) {
             throw new BusinessException("전환 생산은 원본 완제품을 선택해야 합니다.");
         }
@@ -77,6 +97,7 @@ public class ProductionLog extends BaseTimeEntity {
                 .productionType(productionType)
                 .sourceProduct(sourceProduct)
                 .note(note)
+                .instantRecord(instantRecord)
                 .build();
     }
 

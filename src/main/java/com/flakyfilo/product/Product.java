@@ -69,10 +69,19 @@ public class Product extends BaseTimeEntity {
     @Column(name = "auto_dispose_if_unsold", nullable = false)
     private boolean autoDisposeIfUnsold = true;
 
+    /**
+     * 즉석주문생산 메뉴인지 (조리대에서 만들어두는 게 아니라, 주문 들어올 때 그 자리에서 만드는 메뉴).
+     * true면 일일 생산/마감 사이클 대상에서 빠지고, currentStock 자체를 안 쓴다 -
+     * "즉석메뉴 빠른 기록"으로 주문 들어올 때마다 그 자리에서 원재료/보류재고만 차감한다.
+     */
+    @Column(name = "instant_production", nullable = false)
+    private boolean instantProduction = false;
+
+
     @Builder(access = AccessLevel.PRIVATE)
     private Product(Long storeId, String name, String category, int price,
                     int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
-                    boolean active, boolean autoDisposeIfUnsold) {
+                    boolean active, boolean autoDisposeIfUnsold, boolean instantProduction) {
         this.storeId = storeId;
         this.name = name;
         this.category = category;
@@ -82,11 +91,12 @@ public class Product extends BaseTimeEntity {
         this.targetCostRatio = targetCostRatio;
         this.active = active;
         this.autoDisposeIfUnsold = autoDisposeIfUnsold;
+        this.instantProduction = instantProduction;
     }
 
     public static Product register(Long storeId, String name, String category, int price,
                                    Integer yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
-                                   Boolean active, Boolean autoDisposeIfUnsold) {
+                                   Boolean active, Boolean autoDisposeIfUnsold, Boolean instantProduction) {
         Validate.notBlank(name, "완제품명");
         return Product.builder()
                 .storeId(storeId)
@@ -97,13 +107,14 @@ public class Product extends BaseTimeEntity {
                 .overheadRate(overheadRate != null ? overheadRate : new BigDecimal("0.10"))
                 .targetCostRatio(targetCostRatio != null ? targetCostRatio : new BigDecimal("0.40"))
                 .active(active == null || active) // 기본값 true
-                .autoDisposeIfUnsold(autoDisposeIfUnsold != null && autoDisposeIfUnsold) // 기본값 false
+                .autoDisposeIfUnsold(autoDisposeIfUnsold == null || autoDisposeIfUnsold) // 기본값 true
+                .instantProduction(instantProduction != null && instantProduction) // 기본값 false
                 .build();
     }
 
     public void updateInfo(String name, String category, int price,
                            int yieldCount, BigDecimal overheadRate, BigDecimal targetCostRatio,
-                           boolean active, boolean autoDisposeIfUnsold) {
+                           boolean active, boolean autoDisposeIfUnsold, boolean instantProduction) {
         Validate.notBlank(name, "완제품명");
         Validate.strictlyPositive(yieldCount, "나오는 개수");
         this.name = name;
@@ -114,6 +125,7 @@ public class Product extends BaseTimeEntity {
         this.targetCostRatio = targetCostRatio;
         this.active = active;
         this.autoDisposeIfUnsold = autoDisposeIfUnsold;
+        this.instantProduction = instantProduction;
     }
 
     public void increaseStock(int quantity) {

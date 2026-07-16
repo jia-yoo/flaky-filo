@@ -395,6 +395,11 @@ tbody tr:hover {
     color: #34588A;
 }
 
+.badge-instant {
+    background: #DDF8F2;
+    color: #0D7A6F;
+}
+
 .qty-plus {
     color: var(--success);
     font-weight: 500;

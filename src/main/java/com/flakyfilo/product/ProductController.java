@@ -23,7 +23,7 @@ public class ProductController {
         Product product = productService.register(
                 request.storeId(), request.name(), request.category(), request.price(),
                 request.yieldCount(), request.overheadRate(), request.targetCostRatio(),
-                request.active(), request.autoDisposeIfUnsold());
+                request.active(), request.autoDisposeIfUnsold(), request.instantProduction());
         return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
     }
 
@@ -41,7 +41,7 @@ public class ProductController {
     public ProductResponse update(@PathVariable Long id, @Valid @RequestBody ProductUpdateRequest request) {
         productService.updateInfo(id, request.name(), request.category(), request.price(),
                 request.yieldCount(), request.overheadRate(), request.targetCostRatio(),
-                request.active(), request.autoDisposeIfUnsold());
+                request.active(), request.autoDisposeIfUnsold(), request.instantProduction());
         return ProductResponse.from(productService.getById(id));
     }
 
@@ -49,6 +49,16 @@ public class ProductController {
     @GetMapping("/active")
     public List<ProductResponse> getActiveProducts() {
         return productService.getActiveProducts(DEFAULT_STORE_ID).stream().map(ProductResponse::from).toList();
+    }
+
+    @GetMapping("/active/scheduled")
+    public List<ProductResponse> getScheduledProductionProducts() {
+        return productService.getScheduledProductionProducts(DEFAULT_STORE_ID).stream().map(ProductResponse::from).toList();
+    }
+
+    @GetMapping("/active/instant")
+    public List<ProductResponse> getInstantProductionProducts() {
+        return productService.getInstantProductionProducts(DEFAULT_STORE_ID).stream().map(ProductResponse::from).toList();
     }
 
     // 마감 즉시 폐기 (기존 ReserveStockRequest 재사용 - quantity 하나만 있으면 됨)
