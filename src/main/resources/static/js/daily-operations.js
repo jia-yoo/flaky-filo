@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 document.getElementById("op-date").addEventListener("change", refreshAll);
 
 let isDateClosed = false; // 선택된 날짜가 이미 마감 처리됐는지
+let closingActions = []; // 선택된 날짜에 마감 때 실제로 한 폐기/보류 기록 [{productId, productName, actionType, quantity}]
 
 async function refreshAll() {
     await loadActiveProducts();
@@ -29,14 +30,16 @@ async function loadClosingStatus() {
     const selectedDate = document.getElementById("op-date").value;
     try {
         const response = await fetch(`/api/daily-closings/${selectedDate}`);
-        const data = response.ok ? await response.json() : { closed: false };
+        const data = response.ok ? await response.json() : { closed: false, actions: [] };
         isDateClosed = data.closed;
+        closingActions = data.actions ?? [];
     } catch {
         isDateClosed = false;
+        closingActions = [];
     }
 }
 
-// 마감된 날짜면 생산 등록 관련 입력/버튼을 다 비활성화하고 안내 배너를 보여줌
+// 마감된 날짜면 생산 등록/마감 처리 관련 입력/버튼을 다 비활성화하고 안내 배너를 보여줌
 function applyClosingLockUI() {
     document.getElementById("closed-banner").style.display = isDateClosed ? "flex" : "none";
 
@@ -44,6 +47,13 @@ function applyClosingLockUI() {
     productionSection.querySelectorAll("input, select, button").forEach((el) => {
         el.disabled = isDateClosed;
     });
+    // 마감 처리 쪽은 마감 전이라도 "이월"이면 수량칸이 원래 disabled라서, 마감 전에는 건드리지 않고 마감됐을 때만 잠근다
+    if (isDateClosed) {
+        document.querySelectorAll("#closing-rows-daily input, #closing-rows-daily select, #closing-rows-daily button")
+            .forEach((el) => {
+                el.disabled = true;
+            });
+    }
     document.getElementById("save-daily-production-btn").disabled = isDateClosed;
 
     // 마감 버튼도 이미 마감된 날짜면 다시 못 누르게
@@ -335,6 +345,12 @@ document.getElementById("save-daily-production-btn").addEventListener("click", a
 function renderClosingRows() {
     const container = document.getElementById("closing-rows-daily");
 
+    // 마감된 날짜는 지금 재고로 입력칸을 새로 만들지 않고, 그날 실제로 처리한 기록을 보여준다
+    if (isDateClosed) {
+        renderClosedClosingRows(container);
+        return;
+    }
+
     if (activeProducts.length === 0) {
         container.innerHTML = "";
         return;
@@ -384,6 +400,43 @@ function renderClosingRows() {
             addClosingActionRow(row.querySelector(".closing-action-rows"));
         });
     });
+}
+
+// 마감 기록 읽기 전용 표시. 이월은 기록이 따로 없어서, 폐기/보류 기록이 없는 완제품은 "이월"로 보여준다.
+// 마감 이후 판매중지된 완제품의 기록도 빠지지 않게, 판매중 목록 + 기록에만 있는 완제품을 합쳐서 그린다.
+function renderClosedClosingRows(container) {
+    const actionsByProduct = {};
+    for (const a of closingActions) {
+        (actionsByProduct[a.productId] ??= { name: a.productName, items: [] }).items.push(a);
+    }
+
+    const rows = activeProducts.map((p) => ({ id: p.id, name: p.name }));
+    for (const [productId, group] of Object.entries(actionsByProduct)) {
+        if (!rows.some((r) => String(r.id) === productId)) {
+            rows.push({ id: Number(productId), name: group.name });
+        }
+    }
+
+    if (rows.length === 0) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const ACTION_LABEL = { WASTE: "폐기", RESERVE: "보류" };
+    container.innerHTML = rows.map((r) => {
+        const items = actionsByProduct[r.id]?.items ?? [];
+        const summary = items.length > 0
+            ? items.map((a) => `${ACTION_LABEL[a.actionType] ?? a.actionType} ${a.quantity}개`).join(", ")
+            : "이월";
+        return `
+            <div class="daily-row" style="padding:10px 0; border-bottom:1px solid var(--border);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="flex:2; font-weight:500;">${escapeHtml(r.name)}</span>
+                    <span style="flex:3; color:${items.length > 0 ? "var(--text-primary)" : "var(--text-secondary)"};">${summary}</span>
+                </div>
+            </div>
+        `;
+    }).join("");
 }
 
 let closingRowCounter = 0;

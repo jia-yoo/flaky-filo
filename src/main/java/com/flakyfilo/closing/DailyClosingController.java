@@ -1,5 +1,6 @@
 package com.flakyfilo.closing;
 
+import com.flakyfilo.closing.dto.ClosingActionResponse;
 import com.flakyfilo.closing.dto.ClosingStockActionRequest;
 import com.flakyfilo.closing.dto.DailyClosingRequest;
 import com.flakyfilo.closing.dto.DailyClosingStatusResponse;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/daily-closings")
@@ -23,7 +25,10 @@ public class DailyClosingController {
 
     @GetMapping("/{date}")
     public DailyClosingStatusResponse getStatus(@PathVariable LocalDate date) {
-        return new DailyClosingStatusResponse(date, dailyClosingService.isClosed(DEFAULT_STORE_ID, date));
+        List<ClosingActionResponse> actions = dailyClosingService.getActions(date).stream()
+                .map(ClosingActionResponse::from)
+                .toList();
+        return new DailyClosingStatusResponse(date, dailyClosingService.isClosed(DEFAULT_STORE_ID, date), actions);
     }
 
     @PostMapping

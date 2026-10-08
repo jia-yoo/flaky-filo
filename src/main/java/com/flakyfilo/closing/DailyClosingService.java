@@ -29,6 +29,11 @@ public class DailyClosingService {
         }
     }
 
+    /** 그날 마감 때 한 폐기/보류 기록 (마감 취소로 되돌린 건 제외). 완제품 정보도 같이 fetch join으로 가져온다. */
+    public List<ClosingActionLog> getActions(LocalDate date) {
+        return closingActionLogRepository.findByClosingDateAndNotReversed(date);
+    }
+
     @Transactional
     public void closeDay(Long storeId, LocalDate date) {
         if (isClosed(storeId, date)) {
