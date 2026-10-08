@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>주문 관리 - Flaky Filo</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Alfa+Slab+One&family=Inter:wght@400;500;600&display=swap"
+          rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="topbar-placeholder"></div>
+<script src="js/common.js"></script>
+
+<main class="page">
+    <div class="page-header">
+        <h1>주문 관리</h1>
+        <p>채널+날짜 하루 합계로 등록하세요. 대체발송이 있으면 "+ 대체 추가"로 나눠서 기록할 수 있어요.</p>
+    </div>
+
+    <datalist id="order-products-datalist"></datalist>
+
+    <section class="card" style="margin-bottom: 24px;">
+        <h3 style="margin-bottom:16px;">주문 등록</h3>
+        <form id="order-form">
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                <div>
+                    <label for="order-channel">채널</label>
+                    <select id="order-channel">
+                        <option value="STORE">매장방문</option>
+                        <option value="NAVER">네이버</option>
+                        <option value="COUPANG">쿠팡</option>
+                        <option value="BAEMIN">배민</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="order-date">날짜</label>
+                    <input id="order-date" required type="date">
+                </div>
+            </div>
+
+            <div style="margin: 8px 0 8px; font-size:13px; color:var(--text-secondary); display:flex; gap:8px;">
+                <span style="flex:2;">완제품</span>
+                <span style="flex:1;">수량</span>
+                <span style="width:110px;"></span>
+            </div>
+            <div id="order-item-rows"></div>
+            <button class="btn-ghost btn-sm" id="add-order-item-btn" style="margin: 8px 0 18px;" type="button">+ 항목 추가</button>
+
+            <div class="form-actions">
+                <button class="btn-primary" id="submit-order-btn" type="submit">주문 등록</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+            <h3>주문 목록</h3>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <label for="order-from-date" style="margin:0;">시작일</label>
+                <input id="order-from-date" type="date">
+                <label for="order-to-date" style="margin:0;">종료일</label>
+                <input id="order-to-date" type="date">
+            </div>
+        </div>
+        <div class="table-scroll">
+        <table>
+            <thead>
+            <tr>
+                <th>날짜</th>
+                <th>채널</th>
+                <th>주문번호</th>
+                <th>총금액</th>
+                <th>항목</th>
+                <th>상태</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody id="order-table-body"></tbody>
+        </table>
+        </div>
+        <div class="empty-state" id="order-empty-state" style="display:none;">
+            이 기간에 등록된 주문이 없어요.
+        </div>
+    </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/orders.js"></script>
+</body>
+</html>
