@@ -374,9 +374,12 @@ function renderClosingRows() {
                     <button type="button" class="btn-ghost btn-sm add-closing-action" style="flex:0 0 auto;">+ 처리 추가</button>
                 </div>
                 <div class="closing-action-rows" style="margin-left:20px;"></div>
+                <div class="closing-carry-preview" style="margin:6px 0 0 20px; font-size:12px;"></div>
             </div>
         `;
     }).join("");
+
+    container.querySelectorAll(".daily-row").forEach(updateCarryPreview);
 
     container.querySelectorAll(".closing-main-action").forEach((select) => {
         select.addEventListener("change", () => {
@@ -391,6 +394,7 @@ function renderClosingRows() {
                 qtyInput.disabled = false;
                 if (!qtyInput.value) qtyInput.value = currentStock;
             }
+            updateCarryPreview(row);
         });
     });
 
@@ -402,7 +406,45 @@ function renderClosingRows() {
     });
 }
 
-// 마감 기록 읽기 전용 표시. 이월은 기록이 따로 없어서, 폐기/보류 기록이 없는 완제품은 "이월"로 보여준다.
+// 수량을 입력하는 동안 "처리 안 한 나머지 = 이월"이 몇 개인지 바로 보여줌.
+// 처리 수량 합계가 남은 재고보다 적으면 나머지는 경고 없이 이월되기 때문에, 저장 전에 눈으로 확인할 수 있게 한다.
+function updateCarryPreview(row) {
+    const currentStock = Number(row.dataset.currentStock);
+    let usedQuantity = 0;
+
+    if (row.querySelector(".closing-main-action").value !== "carry") {
+        usedQuantity += Number(row.querySelector(".closing-main-qty").value || 0);
+    }
+    row.querySelectorAll(".closing-action-rows .closing-action-qty").forEach((input) => {
+        usedQuantity += Number(input.value || 0);
+    });
+
+    const remaining = currentStock - usedQuantity;
+    const preview = row.querySelector(".closing-carry-preview");
+    if (remaining < 0) {
+        preview.textContent = `⚠ 남은 재고보다 ${-remaining}개 많아요`;
+        preview.style.color = "var(--danger)";
+    } else if (usedQuantity > 0 && remaining > 0) {
+        // 일부만 처리한 경우 - 실수일 수 있는 상황이라 눈에 띄게
+        preview.textContent = `→ 나머지 ${remaining}개는 이월돼요`;
+        preview.style.color = "var(--accent)";
+    } else {
+        preview.textContent = remaining > 0 ? `→ ${remaining}개 이월` : "";
+        preview.style.color = "var(--text-secondary)";
+    }
+}
+
+// 수량 입력/추가 처리 줄의 종류 변경은 줄이 새로 생기고 지워져서 개별로 리스너를 달기 번거로움 -
+// 컨테이너 하나에서 위임(event delegation)으로 받아서 그 줄의 이월 미리보기를 갱신한다.
+["input", "change"].forEach((type) => {
+    document.getElementById("closing-rows-daily").addEventListener(type, (e) => {
+        const row = e.target.closest(".daily-row");
+        if (row && row.querySelector(".closing-carry-preview")) updateCarryPreview(row);
+    });
+});
+
+// 마감 기록 읽기 전용 표시 (폐기/보류/이월). 기록이 없는 완제품은 마감 때 남은 재고가 없었던 것 -
+// 단, 이월 기록(CARRY)을 남기기 전에 마감한 날짜는 이월분이 기록에 없어서 "-"로 보일 수 있다.
 // 마감 이후 판매중지된 완제품의 기록도 빠지지 않게, 판매중 목록 + 기록에만 있는 완제품을 합쳐서 그린다.
 function renderClosedClosingRows(container) {
     const actionsByProduct = {};
@@ -422,12 +464,12 @@ function renderClosedClosingRows(container) {
         return;
     }
 
-    const ACTION_LABEL = { WASTE: "폐기", RESERVE: "보류" };
+    const ACTION_LABEL = { WASTE: "폐기", RESERVE: "보류", CARRY: "이월" };
     container.innerHTML = rows.map((r) => {
         const items = actionsByProduct[r.id]?.items ?? [];
         const summary = items.length > 0
             ? items.map((a) => `${ACTION_LABEL[a.actionType] ?? a.actionType} ${a.quantity}개`).join(", ")
-            : "이월";
+            : "-";
         return `
             <div class="daily-row" style="padding:10px 0; border-bottom:1px solid var(--border);">
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -452,9 +494,15 @@ function addClosingActionRow(container, action = "waste", quantity = "") {
             <option value="reserve" ${action === "reserve" ? "selected" : ""}>보류</option>
         </select>
         <input type="number" min="0" class="closing-action-qty" placeholder="수량" style="flex:1;" value="${quantity}">
-        <button type="button" class="btn-danger-text" onclick="document.getElementById('${rowId}').remove()">삭제</button>
+        <button type="button" class="btn-danger-text">삭제</button>
     `;
+    div.querySelector("button").addEventListener("click", () => {
+        const row = div.closest(".daily-row");
+        div.remove();
+        updateCarryPreview(row); // 지운 줄의 수량만큼 이월 미리보기도 다시 계산
+    });
     container.appendChild(div);
+    updateCarryPreview(container.closest(".daily-row"));
 }
 
 document.getElementById("save-daily-closing-btn").addEventListener("click", async () => {

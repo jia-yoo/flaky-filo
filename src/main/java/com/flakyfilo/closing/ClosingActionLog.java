@@ -32,8 +32,10 @@ public class ClosingActionLog extends BaseTimeEntity {
     @Column(name = "closing_date", nullable = false)
     private LocalDate closingDate;
 
+    // columnDefinition 없이 두면 Hibernate가 MySQL에 enum('RESERVE','WASTE') 타입으로 만들어서,
+    // 나중에 enum 값을 추가하면(CARRY 등) ddl-auto: update로는 컬럼이 안 바뀌어 저장이 실패한다 - 그래서 varchar로 고정
     @Enumerated(EnumType.STRING)
-    @Column(name = "action_type", nullable = false, length = 20)
+    @Column(name = "action_type", nullable = false, length = 20, columnDefinition = "varchar(20)")
     private ClosingActionType actionType;
 
     @Column(nullable = false)
