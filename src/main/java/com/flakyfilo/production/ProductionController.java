@@ -21,7 +21,7 @@ public class ProductionController {
     public ResponseEntity<ProductionLogResponse> register(@Valid @RequestBody ProductionRegisterRequest request) {
         ProductionLog log = productionService.register(
                 request.productId(), request.producedQuantity(), request.productionDate(),
-                request.productionType(), request.sourceProductId(), request.note());
+                request.productionType(), request.sourceProductId(), request.sourceStockType(), request.note());
         return ResponseEntity.status(HttpStatus.CREATED).body(ProductionLogResponse.from(log));
     }
 
@@ -35,7 +35,7 @@ public class ProductionController {
     public ResponseEntity<ProductionLogResponse> registerInstant(@Valid @RequestBody ProductionRegisterRequest request) {
         ProductionLog log = productionService.registerInstant(
                 request.productId(), request.producedQuantity(), request.productionDate(),
-                request.productionType(), request.sourceProductId(), request.note());
+                request.productionType(), request.sourceProductId(), request.sourceStockType(), request.note());
         return ResponseEntity.status(HttpStatus.CREATED).body(ProductionLogResponse.from(log));
     }
 

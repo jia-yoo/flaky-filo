@@ -1,6 +1,7 @@
 package com.flakyfilo.production.dto;
 
 import com.flakyfilo.common.enums.ProductionType;
+import com.flakyfilo.common.enums.SourceStockType;
 import com.flakyfilo.production.ProductionLog;
 
 import java.time.LocalDate;
@@ -15,6 +16,7 @@ public record ProductionLogResponse(
         ProductionType productionType,
         Long sourceProductId,
         String sourceProductName,
+        SourceStockType sourceStockType,
         String note,
         boolean cancelled,
         LocalDateTime createdAt
@@ -29,6 +31,7 @@ public record ProductionLogResponse(
                 log.getProductionType(),
                 log.getSourceProduct() != null ? log.getSourceProduct().getId() : null,
                 log.getSourceProduct() != null ? log.getSourceProduct().getName() : null,
+                log.getSourceStockType(),
                 log.getNote(),
                 log.isCancelled(),
                 log.getCreatedAt()

@@ -3,6 +3,7 @@ package com.flakyfilo.production;
 import com.flakyfilo.common.BaseTimeEntity;
 import com.flakyfilo.common.Validate;
 import com.flakyfilo.common.enums.ProductionType;
+import com.flakyfilo.common.enums.SourceStockType;
 import com.flakyfilo.common.exception.BusinessException;
 import com.flakyfilo.product.Product;
 import jakarta.persistence.*;
@@ -14,7 +15,8 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 /**
- * 생산 이벤트. productionType이 CONVERSION이면 sourceProduct(보류 재고를 제공한 완제품)가 채워진다.
+ * 생산 이벤트. productionType이 CONVERSION이면 sourceProduct(원본 완제품)가 채워지고,
+ * sourceStockType으로 그 원본의 "보류재고"에서 가져온 건지 "당일 생산분(현재고)"에서 가져온 건지 구분한다.
  * 오입력했을 때는 이 기록을 직접 고치지 않고 cancel()로 취소한 뒤 다시 등록한다.
  */
 @Getter
@@ -41,10 +43,15 @@ public class ProductionLog extends BaseTimeEntity {
     @Column(name = "production_type", nullable = false, length = 20)
     private ProductionType productionType;
 
-    // CONVERSION일 때만 값이 있음 - 보류 재고를 제공한 원본 완제품 (예: 크로와상)
+    // CONVERSION일 때만 값이 있음 - 원본 완제품 (예: 크로와상)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_product_id")
     private Product sourceProduct;
+
+    // CONVERSION일 때만 값이 있음 - 원본의 보류재고를 썼는지, 당일 생산분(현재고)을 썼는지
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_stock_type", length = 20)
+    private SourceStockType sourceStockType;
 
     @Column(length = 200)
     private String note;
@@ -62,33 +69,45 @@ public class ProductionLog extends BaseTimeEntity {
 
     @Builder(access = AccessLevel.PRIVATE)
     private ProductionLog(Product product, int producedQuantity, LocalDate productionDate,
-                          ProductionType productionType, Product sourceProduct, String note, boolean instantRecord) {
+                          ProductionType productionType, Product sourceProduct, SourceStockType sourceStockType,
+                          String note, boolean instantRecord) {
         this.product = product;
         this.producedQuantity = producedQuantity;
         this.productionDate = productionDate;
         this.productionType = productionType;
         this.sourceProduct = sourceProduct;
+        this.sourceStockType = sourceStockType;
         this.note = note;
         this.instantRecord = instantRecord;
     }
 
     public static ProductionLog register(Product product, int producedQuantity, LocalDate productionDate,
-                                         ProductionType productionType, Product sourceProduct, String note) {
-        return registerInternal(product, producedQuantity, productionDate, productionType, sourceProduct, note, false);
+                                         ProductionType productionType, Product sourceProduct,
+                                         SourceStockType sourceStockType, String note) {
+        return registerInternal(product, producedQuantity, productionDate, productionType,
+                sourceProduct, sourceStockType, note, false);
     }
 
     /** 즉석메뉴 빠른 기록 전용 - Product.currentStock을 안 늘리는 생산 이벤트. */
     public static ProductionLog registerInstant(Product product, int producedQuantity, LocalDate productionDate,
-                                                ProductionType productionType, Product sourceProduct, String note) {
-        return registerInternal(product, producedQuantity, productionDate, productionType, sourceProduct, note, true);
+                                                ProductionType productionType, Product sourceProduct,
+                                                SourceStockType sourceStockType, String note) {
+        return registerInternal(product, producedQuantity, productionDate, productionType,
+                sourceProduct, sourceStockType, note, true);
     }
 
     private static ProductionLog registerInternal(Product product, int producedQuantity, LocalDate productionDate,
-                                                  ProductionType productionType, Product sourceProduct, String note,
+                                                  ProductionType productionType, Product sourceProduct,
+                                                  SourceStockType sourceStockType, String note,
                                                   boolean instantRecord) {
-        Validate.notNegative(producedQuantity, "생산 수량");
-        if (productionType == ProductionType.CONVERSION && sourceProduct == null) {
-            throw new BusinessException("전환 생산은 원본 완제품을 선택해야 합니다.");
+        Validate.strictlyPositive(producedQuantity, "생산 수량");
+        if (productionType == ProductionType.CONVERSION) {
+            if (sourceProduct == null) {
+                throw new BusinessException("전환 생산은 원본 완제품을 선택해야 합니다.");
+            }
+            if (sourceStockType == null) {
+                throw new BusinessException("전환 생산은 보류재고/당일생산분 중 어디서 가져올지 선택해야 합니다.");
+            }
         }
         return ProductionLog.builder()
                 .product(product)
@@ -96,6 +115,7 @@ public class ProductionLog extends BaseTimeEntity {
                 .productionDate(productionDate != null ? productionDate : LocalDate.now())
                 .productionType(productionType)
                 .sourceProduct(sourceProduct)
+                .sourceStockType(sourceStockType)
                 .note(note)
                 .instantRecord(instantRecord)
                 .build();

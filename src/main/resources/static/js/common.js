@@ -16,6 +16,7 @@ const TOPBAR_HTML = `
         <a href="materials.html" class="${CURRENT_PATH.startsWith("material") ? "active" : ""}">원재료</a>
         <a href="products.html" class="${CURRENT_PATH === "products.html" ? "active" : ""}">완제품</a>
         <a href="daily-operations.html" class="${CURRENT_PATH === "daily-operations.html" ? "active" : ""}">일일 운영</a>
+        <a href="orders.html" class="${CURRENT_PATH === "orders.html" ? "active" : ""}">주문</a>
     </nav>
 </header>
 `;
@@ -40,7 +41,126 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     toastEl = document.getElementById("toast");
+
+    setupInstantMenuWidget();
 });
+
+// ===== 즉석메뉴 빠른 기록 (모든 화면에 떠있는 플로팅 위젯) =====
+// 즉석주문생산 메뉴는 일일 생산/마감 사이클 대상이 아니라, 주문 들어오는 그 순간에
+// 원재료(또는 보류재고)를 바로 차감해야 정확하다 - 그래서 화면 이동 없이 어디서든 탭 한 번으로 기록.
+async function setupInstantMenuWidget() {
+    const widgetHtml = `
+        <div id="instant-menu-widget">
+            <button id="instant-menu-toggle" type="button">⚡</button>
+            <div id="instant-menu-panel" style="display:none;">
+                <h4>즉석메뉴 빠른 기록</h4>
+                <div id="instant-menu-list"><p class="hint">불러오는 중...</p></div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", widgetHtml);
+
+    const toggleBtn = document.getElementById("instant-menu-toggle");
+    const panel = document.getElementById("instant-menu-panel");
+
+    toggleBtn.addEventListener("click", async () => {
+        const isOpen = panel.style.display !== "none";
+        if (isOpen) {
+            panel.style.display = "none";
+        } else {
+            panel.style.display = "block";
+            await loadInstantMenuList();
+        }
+    });
+}
+
+async function loadInstantMenuList() {
+    const listEl = document.getElementById("instant-menu-list");
+    try {
+        const response = await fetch("/api/products/active/instant");
+        if (!response.ok) throw new Error("즉석메뉴 목록을 불러오지 못했습니다.");
+        const products = await response.json();
+
+        if (products.length === 0) {
+            listEl.innerHTML = `<p class="hint">즉석주문생산으로 등록된 메뉴가 없어요.</p>`;
+            return;
+        }
+
+        const withSources = await Promise.all(products.map(async (p) => {
+            const res = await fetch(`/api/products/${p.id}/conversion-recipes`);
+            const sources = res.ok ? await res.json() : [];
+            const uniqueSources = [];
+            const seen = new Set();
+            for (const item of sources) {
+                if (!seen.has(item.sourceProductId)) {
+                    seen.add(item.sourceProductId);
+                    uniqueSources.push({ sourceProductId: item.sourceProductId, sourceProductName: item.sourceProductName });
+                }
+            }
+            return { ...p, sources: uniqueSources };
+        }));
+
+        listEl.innerHTML = withSources.map((p) => `
+            <div class="instant-menu-row" data-product-id="${p.id}">
+                <span class="instant-menu-name">${p.name}</span>
+                <div class="instant-menu-actions">
+                    <button type="button" class="btn-primary btn-sm instant-normal-btn">일반 +1</button>
+                    ${p.sources.length > 0 ? `
+                        <select class="instant-source-select">
+                            ${p.sources.map((s) => `<option value="${s.sourceProductId}">${s.sourceProductName}</option>`).join("")}
+                        </select>
+                        <select class="instant-stock-type-select">
+                            <option value="RESERVED">보류재고</option>
+                            <option value="CURRENT">당일생산분</option>
+                        </select>
+                        <button type="button" class="btn-ghost btn-sm instant-conversion-btn">전환 +1</button>
+                    ` : ""}
+                </div>
+            </div>
+        `).join("");
+
+        listEl.querySelectorAll(".instant-normal-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const productId = Number(btn.closest(".instant-menu-row").dataset.productId);
+                recordInstantProduction(productId, "NORMAL", null, null);
+            });
+        });
+        listEl.querySelectorAll(".instant-conversion-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const row = btn.closest(".instant-menu-row");
+                const productId = Number(row.dataset.productId);
+                const sourceId = Number(row.querySelector(".instant-source-select").value);
+                const stockType = row.querySelector(".instant-stock-type-select").value;
+                recordInstantProduction(productId, "CONVERSION", sourceId, stockType);
+            });
+        });
+    } catch (err) {
+        listEl.innerHTML = `<p class="hint">불러오기 실패</p>`;
+    }
+}
+
+async function recordInstantProduction(productId, productionType, sourceProductId, sourceStockType) {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    try {
+        const response = await fetch("/api/productions/instant", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                productId, producedQuantity: 1, productionDate: todayStr,
+                productionType, sourceProductId, sourceStockType, note: "즉석메뉴 빠른 기록",
+            }),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message);
+        }
+        showToast("기록됐어요.");
+    } catch (err) {
+        showToast(err.message, true);
+    }
+}
 
 // ===== 공용 토스트 알림 =====
 // material.js/products.js/material-history.js 등 여러 화면이 똑같은 로직을 중복해서

@@ -562,3 +562,76 @@ dialog h3 {
     color: var(--accent);
     background: rgba(122, 46, 61, 0.06);
 }
+
+/* ===== 즉석메뉴 빠른 기록 플로팅 위젯 (모든 화면 공통, common.js가 주입) ===== */
+#instant-menu-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 500;
+}
+
+#instant-menu-toggle {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(122, 46, 61, 0.35);
+    border: none;
+}
+
+#instant-menu-toggle:hover {
+    background: var(--accent-hover);
+}
+
+#instant-menu-panel {
+    position: absolute;
+    bottom: 64px;
+    right: 0;
+    width: 300px;
+    max-height: 360px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+}
+
+#instant-menu-panel h4 {
+    font-family: "Zilla Slab", Georgia, serif;
+    font-size: 14px;
+    margin: 0 0 12px;
+}
+
+.instant-menu-row {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.instant-menu-row:last-child {
+    border-bottom: none;
+}
+
+.instant-menu-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.instant-menu-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.instant-menu-actions select {
+    width: auto;
+    flex: 1;
+    font-size: 12px;
+    padding: 6px 8px;
+}

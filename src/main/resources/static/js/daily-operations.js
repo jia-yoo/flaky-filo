@@ -182,7 +182,8 @@ function renderProductionRows() {
         const todayLogs = (todayLogsByProduct[productId] ?? []).filter((l) => l.productionType === "CONVERSION");
         const subContainer = row.querySelector(".conversion-sub-rows");
         for (const log of todayLogs) {
-            addConversionSubRow(subContainer, productId, log.sourceProductId, log.sourceProductName, log.producedQuantity, log.id);
+            addConversionSubRow(subContainer, productId, log.sourceProductId, log.sourceProductName,
+                    log.producedQuantity, log.id, log.sourceStockType);
         }
     });
 
@@ -198,7 +199,7 @@ function renderProductionRows() {
 // 전환분 한 줄 추가. existingSourceId/existingSourceName/existingQty/existingLogId가 있으면
 // "이미 등록된 전환분"을 화면에 보여주는 것 (수정 가능), 없으면 새로 추가하는 빈 줄.
 function addConversionSubRow(subRowContainer, targetProductId, existingSourceId = "", existingSourceName = "",
-                              existingQty = "", existingLogId = "") {
+                              existingQty = "", existingLogId = "", existingStockType = "RESERVED") {
     const rowId = `conv-sub-${conversionRowCounter++}`;
     const sources = [...(validSourcesByTarget[targetProductId] ?? [])];
 
@@ -214,8 +215,12 @@ function addConversionSubRow(subRowContainer, targetProductId, existingSourceId 
     div.style.cssText = "display:flex; align-items:center; gap:8px; margin-top:6px; font-size:13px;";
     div.innerHTML = `
         <span style="color:var(--text-secondary); flex:0 0 auto;">ㄴ 전환 (원본:</span>
-        <select class="daily-conversion-source" style="flex:1; max-width:200px;">
+        <select class="daily-conversion-source" style="flex:1; max-width:180px;">
             ${sources.map((s) => `<option value="${s.sourceProductId}" ${String(s.sourceProductId) === String(existingSourceId) ? "selected" : ""}>${escapeHtml(s.sourceProductName)}</option>`).join("")}
+        </select>
+        <select class="daily-conversion-stock-type" style="flex:0 0 auto; width:110px;">
+            <option value="RESERVED" ${existingStockType === "RESERVED" ? "selected" : ""}>보류재고</option>
+            <option value="CURRENT" ${existingStockType === "CURRENT" ? "selected" : ""}>당일생산분</option>
         </select>
         <span style="color:var(--text-secondary); flex:0 0 auto;">)</span>
         <input type="number" min="0" class="daily-conversion-qty" placeholder="수량" style="width:90px;" value="${existingQty}">
@@ -270,21 +275,26 @@ document.getElementById("save-daily-production-btn").addEventListener("click", a
             }
         }
 
-        // ----- 전환분 각 줄: 기존 값이랑 다르면 기존 것 취소하고 새로 등록 -----
+        // ----- 전환분 각 줄: 기존 값(수량 또는 재고종류)이랑 다르면 기존 것 취소하고 새로 등록 -----
         const subRows = row.querySelectorAll(".conversion-sub-rows > div");
         for (const sub of subRows) {
             const sourceId = Number(sub.querySelector(".daily-conversion-source").value);
             const newQty = Number(sub.querySelector(".daily-conversion-qty").value || 0);
+            const newStockType = sub.querySelector(".daily-conversion-stock-type").value;
             const existingLogId = sub.dataset.existingLogId ? Number(sub.dataset.existingLogId) : null;
             const existingLog = (todayLogsByProduct[productId] ?? []).find((l) => l.id === existingLogId);
             const existingQty = existingLog ? existingLog.producedQuantity : 0;
+            const existingStockType = existingLog ? existingLog.sourceStockType : null;
 
             if (!sourceId) continue;
 
-            if (newQty !== existingQty) {
+            if (newQty !== existingQty || newStockType !== existingStockType) {
                 if (existingLogId) cancelIds.push(existingLogId);
                 if (newQty > 0) {
-                    registerRequests.push({ productId, producedQuantity: newQty, productionDate, productionType: "CONVERSION", sourceProductId: sourceId, note: null });
+                    registerRequests.push({
+                        productId, producedQuantity: newQty, productionDate, productionType: "CONVERSION",
+                        sourceProductId: sourceId, sourceStockType: newStockType, note: null,
+                    });
                 }
             }
         }
