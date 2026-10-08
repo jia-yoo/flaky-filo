@@ -33,7 +33,7 @@ public class Order extends BaseTimeEntity {
     private String orderNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20)")
     private OrderChannel channel;
 
     @Column(name = "order_date", nullable = false)

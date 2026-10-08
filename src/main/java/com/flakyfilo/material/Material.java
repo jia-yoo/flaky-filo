@@ -31,7 +31,7 @@ public class Material extends BaseTimeEntity {
     private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20)")
     private MaterialUnit unit;
 
     @Column(name = "current_stock", nullable = false, precision = 12, scale = 3)

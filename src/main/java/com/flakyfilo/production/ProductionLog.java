@@ -40,7 +40,7 @@ public class ProductionLog extends BaseTimeEntity {
     private LocalDate productionDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "production_type", nullable = false, length = 20)
+    @Column(name = "production_type", nullable = false, length = 20, columnDefinition = "varchar(20)")
     private ProductionType productionType;
 
     // CONVERSION일 때만 값이 있음 - 원본 완제품 (예: 크로와상)
@@ -50,7 +50,7 @@ public class ProductionLog extends BaseTimeEntity {
 
     // CONVERSION일 때만 값이 있음 - 원본의 보류재고를 썼는지, 당일 생산분(현재고)을 썼는지
     @Enumerated(EnumType.STRING)
-    @Column(name = "source_stock_type", length = 20)
+    @Column(name = "source_stock_type", length = 20, columnDefinition = "varchar(20)")
     private SourceStockType sourceStockType;
 
     @Column(length = 200)

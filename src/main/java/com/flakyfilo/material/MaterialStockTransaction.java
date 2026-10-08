@@ -31,12 +31,12 @@ public class MaterialStockTransaction extends BaseTimeEntity {
     private Material material; // 어떤 원재료의 변동인지
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 20, columnDefinition = "varchar(20)")
     private StockTransactionType type; // 방향(IN/OUT/ADJUST_UP/ADJUST_DOWN)
 
     // 구조화된 사유. 사용자가 고르는 값이 아니라, 어떤 로직 경로로 들어왔는지에 따라 서버가 결정.
     @Enumerated(EnumType.STRING)
-    @Column(name = "reason_code", nullable = false, length = 30)
+    @Column(name = "reason_code", nullable = false, length = 30, columnDefinition = "varchar(30)")
     private StockReasonCode reasonCode;
 
     @Column(nullable = false, precision = 12, scale = 3)
