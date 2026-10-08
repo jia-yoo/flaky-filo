@@ -138,7 +138,9 @@ function renderTable(products) {
                 </div>
             </td>
             <td class="actions-cell">
-                <button class="btn-ghost btn-sm" onclick="openReserveDialog(${p.id}, '${escapeHtml(p.name)}')">보류 재고 폐기</button>
+                <!-- 보류재고가 없으면 버튼을 빼지 않고 투명하게만 숨김 - 수정/삭제 버튼 위치가 줄마다 들쭉날쭉하지 않도록 -->
+                <button class="btn-ghost btn-sm" onclick="openReserveDialog(${p.id}, '${escapeHtml(p.name)}')"
+                        ${(p.reservedStock ?? 0) > 0 ? "" : 'style="visibility:hidden;"'}>보류 재고 폐기</button>
                 <button class="btn-ghost btn-sm" onclick="startEdit(${p.id})">수정</button>
                 <button class="btn-danger-text" onclick="deleteProduct(${p.id})">삭제</button>
             </td>
