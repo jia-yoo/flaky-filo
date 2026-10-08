@@ -10,3 +10,6 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude Code (로컬 IntelliJ MCP 연결 설정)
+.mcp.json
