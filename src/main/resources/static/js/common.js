@@ -25,18 +25,26 @@ document.getElementById("topbar-placeholder").innerHTML = TOPBAR_HTML;
 
 // 모든 <dialog>에 공통 적용: 모달 안(내용) 말고 바깥(배경) 클릭하면 자동으로 닫힘.
 // <dialog>는 showModal()로 열리면 배경(::backdrop)까지 자기 자신이 채우는데,
-// 배경을 클릭하면 이벤트의 target이 dialog 엘리먼트 자기 자신이 된다 (내용 클릭 시엔 안쪽 자식이 target).
-// 그래서 "target이 dialog 자신이면" = "배경을 클릭한 것"으로 판단해서 닫아준다.
+// 배경을 클릭하면 이벤트의 target이 dialog 엘리먼트 자기 자신이 된다.
+// 그런데 모달 안쪽 여백(padding)이나 빈 공간을 클릭해도 target이 dialog 자신이라 구분이 안 된다 -
+// 그래서 target 대신 "클릭 좌표가 모달 네모 영역 밖인지"로 판단해서 닫아준다.
+// 또 모달 안에서 마우스를 누른 채(텍스트 드래그 등) 바깥에서 떼도 닫히지 않도록,
+// 누른 위치(mousedown)와 뗀 위치(click) 둘 다 바깥일 때만 닫는다.
 //
 // 주의: 이 스크립트는 <body> 맨 위(topbar-placeholder 바로 뒤)에서 즉시 실행되는데,
 // 그 시점엔 아래쪽에 있는 <dialog>들이 아직 브라우저에 파싱되기 전이라 못 찾는다.
 // 그래서 DOMContentLoaded(페이지 전체 파싱 완료 시점)까지 기다렸다가 찾는다.
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("dialog").forEach((dialog) => {
+        let pressedOutside = false;
+        dialog.addEventListener("mousedown", (e) => {
+            pressedOutside = isOutsideDialog(dialog, e);
+        });
         dialog.addEventListener("click", (e) => {
-            if (e.target === dialog) {
+            if (pressedOutside && isOutsideDialog(dialog, e)) {
                 dialog.close();
             }
+            pressedOutside = false;
         });
     });
 
@@ -44,6 +52,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setupInstantMenuWidget();
 });
+
+// target이 dialog 자신(= 안쪽 자식 요소가 아님)이면서 좌표가 모달 네모 영역 밖이면 바깥 클릭.
+// target 조건도 같이 보는 이유: 키보드(Enter)로 버튼을 누르면 click 좌표가 (0,0)으로 들어와서
+// 좌표만 보면 바깥 클릭으로 오해할 수 있음.
+function isOutsideDialog(dialog, e) {
+    if (e.target !== dialog) return false;
+    const rect = dialog.getBoundingClientRect();
+    return e.clientX < rect.left || e.clientX > rect.right
+        || e.clientY < rect.top || e.clientY > rect.bottom;
+}
 
 // ===== 즉석메뉴 빠른 기록 (모든 화면에 떠있는 플로팅 위젯) =====
 // 즉석주문생산 메뉴는 일일 생산/마감 사이클 대상이 아니라, 주문 들어오는 그 순간에
