@@ -33,6 +33,7 @@ docker compose up -d          # 로컬 MySQL 8.0 실행 (localhost:3306, DB: fla
 - **예외 처리**: 예상 가능한 업무 오류는 `BusinessException`(한국어 메시지)을 던지면 `GlobalExceptionHandler`가 400 + `{message}`로 응답한다.
 - 서비스는 클래스에 `@Transactional(readOnly = true)`, 변경 메서드에만 `@Transactional`을 붙인다.
 - 고정 코드값(단위, 채널, 재고 사유 등)은 테이블 대신 `common/enums`의 enum으로 관리한다.
+- **엔티티의 enum 필드에는 반드시 `@Enumerated(EnumType.STRING)` + `@Column(..., columnDefinition = "varchar(N)")`을 붙인다.** 빠뜨리면 Hibernate가 MySQL `enum(...)` 타입으로 컬럼을 만든다. 그러면 나중에 enum 값을 추가해도 `ddl-auto: update`가 컬럼을 바꾸지 않아서 저장이 실패한다.
 
 ### 재고 흐름 (여러 서비스에 걸쳐 있음)
 - **원재료(Material)**: 모든 재고 변동은 `MaterialStockTransaction`에 `StockTransactionType`(IN/OUT/ADJUST_UP/DOWN) + `StockReasonCode`로 남긴다. 사유 코드는 사용자가 고르지 않고, 어떤 API 경로로 들어왔는지에 따라 서버가 정한다. 통계는 자유 텍스트 `reason`이 아니라 이 코드로만 집계한다.
