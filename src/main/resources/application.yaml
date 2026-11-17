@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: flakyfilo
+  datasource:
+    url: jdbc:postgresql://localhost:5432/flakyfilo
+    username: flakyfilo
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
